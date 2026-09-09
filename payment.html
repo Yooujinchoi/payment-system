@@ -34,8 +34,13 @@
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; }
         .close-btn:hover { color: #000; }
         
-        .filter-box { display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .filter-box { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; flex-wrap: wrap; gap: 10px; }
+        .filter-left { display: flex; gap: 10px; align-items: center; }
         .filter-box input[type="month"] { padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+        
+        .btn-reset { padding: 8px 14px; background-color: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn-reset:hover { background-color: #c0392b; }
+
         .summary-card { background: #ebf5fb; border: 1px solid #aed6f1; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -46,7 +51,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, getDocs, query, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAceyCFUzGg5fz5pPWt9H6RgE3wrQe0ob4",
@@ -69,6 +74,7 @@
         window.getDocs = getDocs;
         window.query = query;
         window.orderBy = orderBy;
+        window.deleteDoc = deleteDoc;
     </script>
 </head>
 <body>
@@ -89,8 +95,11 @@
             <h2>📊 월간 결제 내역 (매출표)</h2>
 
             <div class="filter-box">
-                <label for="month-select"><b>조회 월 선택:</b></label>
-                <input type="month" id="month-select" onchange="loadSalesData()">
+                <div class="filter-left">
+                    <label for="month-select"><b>조회 월 선택:</b></label>
+                    <input type="month" id="month-select" onchange="loadSalesData()">
+                </div>
+                <button class="btn-reset" onclick="resetSalesData()">🗑️ 매출표 초기화</button>
             </div>
 
             <div class="summary-card">
@@ -237,6 +246,52 @@
             } catch (e) {
                 console.error(e);
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">오류가 발생했습니다.</td></tr>';
+            }
+        }
+
+        // 매출표 초기화 (비밀번호 확인 포함)
+        async function resetSalesData() {
+            const selectedMonth = document.getElementById('month-select').value;
+            if (!selectedMonth) return;
+
+            const pw = prompt("매출표를 초기화하려면 비밀번호를 입력하세요:");
+            if (pw === null) return; // 취소 누른 경우
+
+            if (pw !== "0146") {
+                alert("비밀번호가 올바르지 않습니다.");
+                return;
+            }
+
+            if (confirm(`${selectedMonth} 매출 내역을 정말 전부 삭제하시겠습니까? 삭제된 내역은 복구할 수 없습니다.`)) {
+                try {
+                    const q = window.query(window.collection(window.db, "orders"));
+                    const querySnapshot = await window.getDocs(q);
+
+                    let deleteCount = 0;
+                    const deletePromises = [];
+
+                    querySnapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        if (data.paid && data.timestamp) {
+                            const orderDate = new Date(data.timestamp);
+                            const orderYearMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+
+                            // 선택한 월의 결제 완료 건 삭제
+                            if (orderYearMonth === selectedMonth) {
+                                deletePromises.push(window.deleteDoc(window.doc(window.db, "orders", docSnap.id)));
+                                deleteCount++;
+                            }
+                        }
+                    });
+
+                    await Promise.all(deletePromises);
+                    alert(`${deleteCount}건의 매출 내역이 정상적으로 삭제되었습니다.`);
+                    loadSalesData(); // 테이블 새로고침
+
+                } catch (e) {
+                    console.error(e);
+                    alert("초기화 중 오류가 발생했습니다.");
+                }
             }
         }
     </script>
