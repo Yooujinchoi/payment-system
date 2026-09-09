@@ -14,9 +14,12 @@
         
         .category-title { font-size: 18px; font-weight: bold; color: #4a3b32; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #4a3b32; }
         .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .menu-item.soldout { opacity: 0.6; }
         .menu-name { font-weight: bold; font-size: 15px; }
+        .soldout-tag { color: #e74c3c; font-weight: bold; font-size: 13px; margin-left: 5px; }
         .menu-price { color: #666; font-size: 14px; }
         .qty-btn { width: 32px; height: 32px; border: 1px solid #ccc; background: #fff; border-radius: 4px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .qty-btn:disabled { background: #eee; border-color: #ddd; color: #ccc; cursor: not-allowed; }
         .qty-num { margin: 0 10px; font-weight: bold; font-size: 16px; }
         
         .call-btn { width: 100%; padding: 12px; background: #7f8c8d; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
@@ -29,9 +32,8 @@
     <!-- Firebase SDK 모듈 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
-        // 사용자님의 실제 Firebase 설정 적용 완료
         const firebaseConfig = {
             apiKey: "AIzaSyAceyCFUzGg5fz5pPWt9H6RgE3wrQe0ob4",
             authDomain: "memil-pos.firebaseapp.com",
@@ -48,6 +50,16 @@
         window.db = db;
         window.addDoc = addDoc;
         window.collection = collection;
+
+        // 품절 상태 실시간 감지
+        onSnapshot(doc(db, "settings", "soldout"), (docSnap) => {
+            if (docSnap.exists()) {
+                window.soldOutList = docSnap.data().items || [];
+            } else {
+                window.soldOutList = [];
+            }
+            if (window.renderMenu) window.renderMenu();
+        });
     </script>
 </head>
 <body>
@@ -138,7 +150,7 @@
                 items: [
                     { name: "소주 / 맥주", price: 5000, kitchen: 1 },
                     { name: "봉평메밀막걸리", price: 5000, kitchen: 1 },
-                    { name: "음료수", price: 5000, kitchen: 1 },
+                    { name: "음료수", price: 2000, kitchen: 1 },
                     { name: "사리추가", price: 3000, kitchen: 2 }
                 ]
             }
@@ -148,34 +160,47 @@
         menuCategories.forEach(cat => flatMenus.push(...cat.items));
         let quantities = new Array(flatMenus.length).fill(0);
 
-        const menuContainer = document.getElementById('menu-list');
-        let globalIndex = 0;
+        window.renderMenu = function() {
+            const menuContainer = document.getElementById('menu-list');
+            menuContainer.innerHTML = '';
+            let globalIndex = 0;
 
-        menuCategories.forEach(cat => {
-            const catTitle = document.createElement('div');
-            catTitle.className = 'category-title';
-            catTitle.innerText = cat.category;
-            menuContainer.appendChild(catTitle);
+            const currentSoldOuts = window.soldOutList || [];
 
-            cat.items.forEach(menu => {
-                const idx = globalIndex;
-                const item = document.createElement('div');
-                item.className = 'menu-item';
-                item.innerHTML = `
-                    <div>
-                        <div class="menu-name">${menu.name}</div>
-                        <div class="menu-price">${menu.price.toLocaleString()}원</div>
-                    </div>
-                    <div>
-                        <button class="qty-btn" onclick="changeQty(${idx}, -1)">-</button>
-                        <span class="qty-num" id="qty-${idx}">0</span>
-                        <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
-                    </div>
-                `;
-                menuContainer.appendChild(item);
-                globalIndex++;
+            menuCategories.forEach(cat => {
+                const catTitle = document.createElement('div');
+                catTitle.className = 'category-title';
+                catTitle.innerText = cat.category;
+                menuContainer.appendChild(catTitle);
+
+                cat.items.forEach(menu => {
+                    const idx = globalIndex;
+                    const isSoldOut = currentSoldOuts.includes(menu.name);
+
+                    if (isSoldOut) quantities[idx] = 0;
+
+                    const item = document.createElement('div');
+                    item.className = `menu-item ${isSoldOut ? 'soldout' : ''}`;
+                    item.innerHTML = `
+                        <div>
+                            <div class="menu-name">
+                                ${menu.name}
+                                ${isSoldOut ? '<span class="soldout-tag">(재료가 소진되었습니다)</span>' : ''}
+                            </div>
+                            <div class="menu-price">${menu.price.toLocaleString()}원</div>
+                        </div>
+                        <div>
+                            <button class="qty-btn" onclick="changeQty(${idx}, -1)" ${isSoldOut ? 'disabled' : ''}>-</button>
+                            <span class="qty-num" id="qty-${idx}">${quantities[idx]}</span>
+                            <button class="qty-btn" onclick="changeQty(${idx}, 1)" ${isSoldOut ? 'disabled' : ''}>+</button>
+                        </div>
+                    `;
+                    menuContainer.appendChild(item);
+                    globalIndex++;
+                });
             });
-        });
+            calculateTotal();
+        };
 
         function changeQty(index, delta) {
             if (quantities[index] + delta >= 0) {
@@ -200,10 +225,7 @@
                 alert("테이블 위치를 선택해주세요.");
                 return;
             }
-            
-            if (!confirm(`${tableSelect}에서 직원을 호출하시겠습니까?`)) {
-                return;
-            }
+            if (!confirm(`${tableSelect}에서 직원을 호출하시겠습니까?`)) return;
 
             const now = new Date();
             const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
@@ -308,6 +330,10 @@
                 alert("주문 전송 중 오류가 발생했습니다: " + e.message);
             }
         }
+
+        window.onload = function() {
+            window.renderMenu();
+        };
     </script>
 </body>
 </html>
