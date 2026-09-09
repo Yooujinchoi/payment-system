@@ -14,19 +14,22 @@
         .btn-sales:hover { background-color: #219653; }
 
         .payment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-        .pay-card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 4px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: space-between; border-left: 6px solid #e74c3c; }
-        .pay-card.paid { border-left-color: #2ecc71; opacity: 0.6; }
+        .pay-card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 4px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: space-between; border-top: 6px solid #e74c3c; min-height: 250px; }
         
         .card-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; margin-bottom: 12px; }
-        .table-name { font-size: 18px; font-weight: bold; color: #d32f2f; }
-        .order-time { font-size: 13px; color: #7f8c8d; }
+        .table-name { font-size: 20px; font-weight: bold; color: #2c3e50; background: #e8f8f5; padding: 4px 10px; border-radius: 6px; border: 1px solid #a3e4d7; }
+        .order-count { font-size: 13px; color: #7f8c8d; }
 
         .item-list { margin-bottom: 15px; }
-        .item-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 15px; }
-        
+        .item-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 15px; padding: 4px 0; border-bottom: 1px dashed #f0f0f0; }
+        .item-name { font-weight: 500; }
+        .item-qty { color: #d32f2f; font-weight: bold; }
+
         .total-box { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 2px solid #34495e; font-size: 18px; font-weight: bold; color: #2c3e50; }
         .btn-pay { width: 100%; padding: 12px; background: #e74c3c; color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 12px; }
-        .btn-pay.completed { background: #7f8c8d; cursor: not-allowed; }
+        .btn-pay:hover { background: #c0392b; }
+
+        .empty-msg { grid-column: 1 / -1; text-align: center; padding: 50px; color: #7f8c8d; font-size: 18px; }
 
         /* 매출표 팝업창(모달) 스타일 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
@@ -80,12 +83,12 @@
 <body>
 
     <header>
-        <h1>💳 카운터 결제 관리</h1>
+        <h1>💳 카운터 테이블별 결제 관리</h1>
         <button class="btn-sales" onclick="openSalesModal()">📊 월간 매출표 바로보기</button>
     </header>
 
     <div class="payment-grid" id="payment-container">
-        <!-- 주문 결제 대기 내역 들어오는 곳 -->
+        <!-- 테이블별 누적 주문 내역 들어오는 곳 -->
     </div>
 
     <!-- 매출표 팝업창 (모달) -->
@@ -135,50 +138,105 @@
                 const container = document.getElementById('payment-container');
                 container.innerHTML = '';
 
+                // 미결제 주문 건들을 테이블 이름 기준으로 그룹화
+                const tablesMap = {};
+
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
                     const orderId = docSnap.id;
 
-                    // 미결제 건만 상단에 노출
                     if (!data.paid) {
-                        const card = document.createElement('div');
-                        card.className = 'pay-card';
+                        const tableName = data.table || '미지정 테이블';
 
-                        let itemsHtml = '';
-                        if(data.items) {
-                            data.items.forEach(i => {
-                                itemsHtml += `<div class="item-row"><span>${i.name} (${i.qty}개)</span><span>${(i.price || 0).toLocaleString()}원</span></div>`;
-                            });
+                        if (!tablesMap[tableName]) {
+                            tablesMap[tableName] = {
+                                orderIds: [],
+                                itemsMap: {},
+                                grandTotal: 0,
+                                orderCount: 0
+                            };
                         }
 
-                        card.innerHTML = `
-                            <div>
-                                <div class="card-head">
-                                    <span class="table-name">${data.table}</span>
-                                    <span class="order-time">${data.time}</span>
-                                </div>
-                                <div class="item-list">${itemsHtml}</div>
-                            </div>
-                            <div>
-                                <div class="total-box">
-                                    <span>총 결제 금액</span>
-                                    <span style="color:#d32f2f;">${(data.total || 0).toLocaleString()}원</span>
-                                </div>
-                                <button class="btn-pay" onclick="markAsPaid('${orderId}')">💳 결제 완료 처리</button>
+                        tablesMap[tableName].orderIds.push(orderId);
+                        tablesMap[tableName].orderCount++;
+                        tablesMap[tableName].grandTotal += (data.total || 0);
+
+                        // 메뉴 수량 합산
+                        if (data.items) {
+                            data.items.forEach(i => {
+                                if (!tablesMap[tableName].itemsMap[i.name]) {
+                                    tablesMap[tableName].itemsMap[i.name] = {
+                                        qty: 0,
+                                        price: i.price || 0
+                                    };
+                                }
+                                tablesMap[tableName].itemsMap[i.name].qty += i.qty;
+                            });
+                        }
+                    }
+                });
+
+                const tableNames = Object.keys(tablesMap);
+
+                if (tableNames.length === 0) {
+                    container.innerHTML = '<div class="empty-msg">현재 식사 중인 테이블이 없습니다.</div>';
+                    return;
+                }
+
+                // 테이블 이름 정렬
+                tableNames.sort().forEach((tableName) => {
+                    const tableData = tablesMap[tableName];
+                    const card = document.createElement('div');
+                    card.className = 'pay-card';
+
+                    let itemsHtml = '';
+                    for (const [itemName, itemDetail] of Object.entries(tableData.itemsMap)) {
+                        const itemTotal = itemDetail.qty * itemDetail.price;
+                        itemsHtml += `
+                            <div class="item-row">
+                                <span class="item-name">• ${itemName} <span class="item-qty">x ${itemDetail.qty}</span></span>
+                                <span>${itemTotal.toLocaleString()}원</span>
                             </div>
                         `;
-                        container.appendChild(card);
                     }
+
+                    const jsonOrderIds = JSON.stringify(tableData.orderIds).replace(/"/g, '&quot;');
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="card-head">
+                                <span class="table-name">${tableName}</span>
+                                <span class="order-count">주문 ${tableData.orderCount}건 누적</span>
+                            </div>
+                            <div class="item-list">${itemsHtml}</div>
+                        </div>
+                        <div>
+                            <div class="total-box">
+                                <span>최종 결제 금액</span>
+                                <span style="color:#d32f2f;">${tableData.grandTotal.toLocaleString()}원</span>
+                            </div>
+                            <button class="btn-pay" onclick="payTable('${tableName}', '${jsonOrderIds}')">💳 테이블 전체 결제 완료</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
                 });
             });
         };
 
-        // 결제 완료 처리
-        async function markAsPaid(orderId) {
-            if(confirm("결제를 완료 처리하시겠습니까?")) {
-                await window.updateDoc(window.doc(window.db, "orders", orderId), {
-                    paid: true
-                });
+        // 테이블 전체 결제 완료 처리
+        async function payTable(tableName, jsonOrderIds) {
+            const orderIds = JSON.parse(jsonOrderIds);
+            if(confirm(`[${tableName}] 테이블의 모든 주문을 결제 완료 처리하시겠습니까?`)) {
+                try {
+                    const updatePromises = orderIds.map(id => 
+                        window.updateDoc(window.doc(window.db, "orders", id), { paid: true })
+                    );
+                    await Promise.all(updatePromises);
+                    alert(`[${tableName}] 결제가 완료되었습니다.`);
+                } catch(e) {
+                    console.error(e);
+                    alert("결제 처리 중 오류가 발생했습니다.");
+                }
             }
         }
 
@@ -249,13 +307,13 @@
             }
         }
 
-        // 매출표 초기화 (비밀번호 확인 포함)
+        // 매출표 초기화 (비밀번호 0146 확인)
         async function resetSalesData() {
             const selectedMonth = document.getElementById('month-select').value;
             if (!selectedMonth) return;
 
             const pw = prompt("매출표를 초기화하려면 비밀번호를 입력하세요:");
-            if (pw === null) return; // 취소 누른 경우
+            if (pw === null) return;
 
             if (pw !== "0146") {
                 alert("비밀번호가 올바르지 않습니다.");
@@ -276,7 +334,6 @@
                             const orderDate = new Date(data.timestamp);
                             const orderYearMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
 
-                            // 선택한 월의 결제 완료 건 삭제
                             if (orderYearMonth === selectedMonth) {
                                 deletePromises.push(window.deleteDoc(window.doc(window.db, "orders", docSnap.id)));
                                 deleteCount++;
@@ -286,7 +343,7 @@
 
                     await Promise.all(deletePromises);
                     alert(`${deleteCount}건의 매출 내역이 정상적으로 삭제되었습니다.`);
-                    loadSalesData(); // 테이블 새로고침
+                    loadSalesData();
 
                 } catch (e) {
                     console.error(e);
