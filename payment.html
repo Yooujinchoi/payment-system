@@ -3,40 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>오셨드레요 메밀여행 - 카운터 결제 POS</title>
+    <title>카운터 결제 시스템 - 오셨드레요 메밀여행</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
-        body { background-color: #34495e; color: #333; padding: 20px; }
-        header { display: flex; justify-content: space-between; align-items: center; color: #fff; margin-bottom: 20px; }
-        h1 { font-size: 24px; }
+        body { background-color: #f4f6f7; color: #333; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #34495e; color: #fff; padding: 15px 20px; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
+        h1 { font-size: 22px; }
+        
+        .btn-sales { padding: 10px 16px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn-sales:hover { background-color: #219653; }
 
         .payment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-        .payment-card { background: #fff; border-radius: 10px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: space-between; min-height: 240px; }
+        .pay-card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 4px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: space-between; border-left: 6px solid #e74c3c; }
+        .pay-card.paid { border-left-color: #2ecc71; opacity: 0.6; }
         
-        .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
-        .table-badge { background: #2c3e50; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 16px; font-weight: bold; }
-        .time-text { font-size: 13px; color: #7f8c8d; }
+        .card-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; margin-bottom: 12px; }
+        .table-name { font-size: 18px; font-weight: bold; color: #d32f2f; }
+        .order-time { font-size: 13px; color: #7f8c8d; }
 
-        .item-list { margin-bottom: 15px; max-height: 180px; overflow-y: auto; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; font-size: 15px; margin-bottom: 6px; padding: 4px 0; border-bottom: 1px dashed #f0f0f0; }
-        .item-name { font-weight: bold; color: #2c3e50; }
-        .item-price-info { text-align: right; font-size: 14px; }
-        .item-price { color: #e67e22; font-weight: bold; }
+        .item-list { margin-bottom: 15px; }
+        .item-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 15px; }
+        
+        .total-box { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 2px solid #34495e; font-size: 18px; font-weight: bold; color: #2c3e50; }
+        .btn-pay { width: 100%; padding: 12px; background: #e74c3c; color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 12px; }
+        .btn-pay.completed { background: #7f8c8d; cursor: not-allowed; }
 
-        .card-footer { border-top: 2px solid #eee; padding-top: 10px; margin-top: auto; }
-        .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 18px; font-weight: bold; }
-        .total-price { color: #e74c3c; font-size: 20px; }
-
-        .btn-pay { width: 100%; padding: 12px; background: #27ae60; color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .btn-pay:hover { background: #219150; }
+        /* 매출표 팝업창(모달) 스타일 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #fff; width: 90%; max-width: 800px; max-height: 85vh; border-radius: 12px; padding: 25px; overflow-y: auto; position: relative; }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; }
+        .close-btn:hover { color: #000; }
+        
+        .filter-box { display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .filter-box input[type="month"] { padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+        .summary-card { background: #ebf5fb; border: 1px solid #aed6f1; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: #f4f6f7; }
     </style>
 
-    <!-- Firebase SDK 모듈 -->
+    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 사용자님의 실제 Firebase 설정 적용 완료
         const firebaseConfig = {
             apiKey: "AIzaSyAceyCFUzGg5fz5pPWt9H6RgE3wrQe0ob4",
             authDomain: "memil-pos.firebaseapp.com",
@@ -50,71 +61,184 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
-        onSnapshot(q, (snapshot) => {
-            const container = document.getElementById('payment-container');
-            container.innerHTML = '';
-            let unpaidCount = 0;
-
-            snapshot.docs.forEach(docSnap => {
-                const order = docSnap.data();
-                const docId = docSnap.id;
-
-                if (!order.paid && order.total > 0) {
-                    unpaidCount++;
-                    const card = document.createElement('div');
-                    card.className = 'payment-card';
-
-                    let itemsHtml = '';
-                    order.items.forEach(item => {
-                        itemsHtml += `
-                            <div class="item-row">
-                                <span class="item-name">${item.name}</span>
-                                <span class="item-price-info">
-                                    <span>${item.qty}개</span>
-                                    <span class="item-price">(${item.price ? item.price.toLocaleString() : 0}원)</span>
-                                </span>
-                            </div>
-                        `;
-                    });
-
-                    card.innerHTML = `
-                        <div>
-                            <div class="card-header">
-                                <span class="table-badge">${order.table}</span>
-                                <span class="time-text">${order.time}</span>
-                            </div>
-                            <div class="item-list">${itemsHtml}</div>
-                        </div>
-                        <div class="card-footer">
-                            <div class="total-row">
-                                <span>총 결제금액</span>
-                                <span class="total-price">${order.total.toLocaleString()}원</span>
-                            </div>
-                            <button class="btn-pay" onclick="completePayment('${docId}')">💳 결제 완료</button>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                }
-            });
-
-            if (unpaidCount === 0) {
-                container.innerHTML = '<div style="color:#fff; text-align:center; grid-column: 1/-1; padding: 50px 0; font-size: 18px;">현재 결제 대기 중인 테이블이 없습니다.</div>';
-            }
-        });
-
-        window.completePayment = async function(docId) {
-            if (confirm("결제 완료 처리하시겠습니까?")) {
-                const docRef = doc(db, "orders", docId);
-                await updateDoc(docRef, { paid: true });
-            }
-        };
+        window.db = db;
+        window.collection = collection;
+        window.onSnapshot = onSnapshot;
+        window.doc = doc;
+        window.updateDoc = updateDoc;
+        window.getDocs = getDocs;
+        window.query = query;
+        window.orderBy = orderBy;
     </script>
 </head>
 <body>
+
     <header>
-        <h1>💳 오셨드레요 메밀여행 - 카운터 결제 POS</h1>
+        <h1>💳 카운터 결제 관리</h1>
+        <button class="btn-sales" onclick="openSalesModal()">📊 월간 매출표 바로보기</button>
     </header>
-    <div class="payment-grid" id="payment-container"></div>
+
+    <div class="payment-grid" id="payment-container">
+        <!-- 주문 결제 대기 내역 들어오는 곳 -->
+    </div>
+
+    <!-- 매출표 팝업창 (모달) -->
+    <div class="modal-overlay" id="sales-modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeSalesModal()">&times;</span>
+            <h2>📊 월간 결제 내역 (매출표)</h2>
+
+            <div class="filter-box">
+                <label for="month-select"><b>조회 월 선택:</b></label>
+                <input type="month" id="month-select" onchange="loadSalesData()">
+            </div>
+
+            <div class="summary-card">
+                <span id="summary-month-text" style="font-weight:bold; color:#2e86c1;">선택 월 총 매출</span>
+                <span id="total-monthly-sales" style="font-size:22px; font-weight:bold; color:#1b4f72;">0 원</span>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">결제 일시</th>
+                        <th style="width: 20%;">위치</th>
+                        <th>주문 내역</th>
+                        <th style="text-align:right; width: 20%;">금액</th>
+                    </tr>
+                </thead>
+                <tbody id="sales-table-body">
+                    <tr><td colspan="4" style="text-align:center;">조회 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            document.getElementById('month-select').value = `${y}-${m}`;
+
+            // 실시간 결제 현황 모니터링
+            window.onSnapshot(window.collection(window.db, "orders"), (snapshot) => {
+                const container = document.getElementById('payment-container');
+                container.innerHTML = '';
+
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const orderId = docSnap.id;
+
+                    // 미결제 건만 상단에 노출
+                    if (!data.paid) {
+                        const card = document.createElement('div');
+                        card.className = 'pay-card';
+
+                        let itemsHtml = '';
+                        if(data.items) {
+                            data.items.forEach(i => {
+                                itemsHtml += `<div class="item-row"><span>${i.name} (${i.qty}개)</span><span>${(i.price || 0).toLocaleString()}원</span></div>`;
+                            });
+                        }
+
+                        card.innerHTML = `
+                            <div>
+                                <div class="card-head">
+                                    <span class="table-name">${data.table}</span>
+                                    <span class="order-time">${data.time}</span>
+                                </div>
+                                <div class="item-list">${itemsHtml}</div>
+                            </div>
+                            <div>
+                                <div class="total-box">
+                                    <span>총 결제 금액</span>
+                                    <span style="color:#d32f2f;">${(data.total || 0).toLocaleString()}원</span>
+                                </div>
+                                <button class="btn-pay" onclick="markAsPaid('${orderId}')">💳 결제 완료 처리</button>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    }
+                });
+            });
+        };
+
+        // 결제 완료 처리
+        async function markAsPaid(orderId) {
+            if(confirm("결제를 완료 처리하시겠습니까?")) {
+                await window.updateDoc(window.doc(window.db, "orders", orderId), {
+                    paid: true
+                });
+            }
+        }
+
+        // 매출표 팝업 열기
+        function openSalesModal() {
+            document.getElementById('sales-modal').style.display = 'flex';
+            loadSalesData();
+        }
+
+        // 매출표 팝업 닫기
+        function closeSalesModal() {
+            document.getElementById('sales-modal').style.display = 'none';
+        }
+
+        // 매출 데이터 조회
+        async function loadSalesData() {
+            const selectedMonth = document.getElementById('month-select').value;
+            if (!selectedMonth) return;
+
+            document.getElementById('summary-month-text').innerText = `${selectedMonth} 총 매출액`;
+            const tbody = document.getElementById('sales-table-body');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">불러오는 중...</td></tr>';
+
+            try {
+                const q = window.query(window.collection(window.db, "orders"), window.orderBy("timestamp", "desc"));
+                const querySnapshot = await window.getDocs(q);
+
+                let monthlyTotal = 0;
+                let html = '';
+                let count = 0;
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.paid) {
+                        const orderDate = new Date(data.timestamp);
+                        const orderYearMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+
+                        if (orderYearMonth === selectedMonth) {
+                            count++;
+                            monthlyTotal += (data.total || 0);
+                            const dateStr = `${orderDate.getMonth() + 1}/${orderDate.getDate()} ${data.time || ''}`;
+                            
+                            let itemsText = data.items ? data.items.map(i => `${i.name}(${i.qty})`).join(', ') : '-';
+
+                            html += `
+                                <tr>
+                                    <td>${dateStr}</td>
+                                    <td><b>${data.table}</b></td>
+                                    <td style="font-size:12px; color:#555;">${itemsText}</td>
+                                    <td style="text-align:right; font-weight:bold; color:#d32f2f;">${(data.total || 0).toLocaleString()}원</td>
+                                </tr>
+                            `;
+                        }
+                    }
+                });
+
+                if (count === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999; padding:20px;">결제 완료 내역이 없습니다.</td></tr>';
+                } else {
+                    tbody.innerHTML = html;
+                }
+
+                document.getElementById('total-monthly-sales').innerText = monthlyTotal.toLocaleString() + " 원";
+
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">오류가 발생했습니다.</td></tr>';
+            }
+        }
+    </script>
 </body>
 </html>
