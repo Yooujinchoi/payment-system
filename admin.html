@@ -131,7 +131,7 @@
 
                     if (order.items && order.items.length > 0) {
                         order.items.forEach(item => {
-                            if (item.name.includes('사리추가')) {
+                            if (item.name.includes('사리추가') || item.name.includes('감자전')) {
                                 k2List.push(item);
                             } else if (order.kitchen1 && order.kitchen1.some(k1 => k1.name === item.name)) {
                                 k1List.push(item);
