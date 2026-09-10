@@ -87,11 +87,9 @@
         <button class="btn-sales" onclick="openSalesModal()">📊 월간 매출표 바로보기</button>
     </header>
 
-    <div class="payment-grid" id="payment-container">
-        <!-- 테이블별 누적 주문 내역 들어오는 곳 -->
-    </div>
+    <div class="payment-grid" id="payment-container"></div>
 
-    <!-- 매출표 팝업창 (모달) -->
+    <!-- 매출표 팝업창 -->
     <div class="modal-overlay" id="sales-modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeSalesModal()">&times;</span>
@@ -133,12 +131,10 @@
             const m = String(today.getMonth() + 1).padStart(2, '0');
             document.getElementById('month-select').value = `${y}-${m}`;
 
-            // 실시간 결제 현황 모니터링
             window.onSnapshot(window.collection(window.db, "orders"), (snapshot) => {
                 const container = document.getElementById('payment-container');
                 container.innerHTML = '';
 
-                // 미결제 주문 건들을 테이블 이름 기준으로 그룹화
                 const tablesMap = {};
 
                 snapshot.forEach((docSnap) => {
@@ -161,16 +157,17 @@
                         tablesMap[tableName].orderCount++;
                         tablesMap[tableName].grandTotal += (data.total || 0);
 
-                        // 메뉴 수량 합산
                         if (data.items) {
                             data.items.forEach(i => {
                                 if (!tablesMap[tableName].itemsMap[i.name]) {
                                     tablesMap[tableName].itemsMap[i.name] = {
                                         qty: 0,
-                                        price: i.price || 0
+                                        totalPrice: 0 // 이 항목의 누적 합계 금액
                                     };
                                 }
                                 tablesMap[tableName].itemsMap[i.name].qty += i.qty;
+                                // DB에 전달된 price가 이미 (단가 x 수량) 합계 금액이므로 중복 계산 없이 합산
+                                tablesMap[tableName].itemsMap[i.name].totalPrice += (i.price || 0);
                             });
                         }
                     }
@@ -183,7 +180,6 @@
                     return;
                 }
 
-                // 테이블 이름 정렬
                 tableNames.sort().forEach((tableName) => {
                     const tableData = tablesMap[tableName];
                     const card = document.createElement('div');
@@ -191,11 +187,10 @@
 
                     let itemsHtml = '';
                     for (const [itemName, itemDetail] of Object.entries(tableData.itemsMap)) {
-                        const itemTotal = itemDetail.qty * itemDetail.price;
                         itemsHtml += `
                             <div class="item-row">
                                 <span class="item-name">• ${itemName} <span class="item-qty">x ${itemDetail.qty}</span></span>
-                                <span>${itemTotal.toLocaleString()}원</span>
+                                <span>${itemDetail.totalPrice.toLocaleString()}원</span>
                             </div>
                         `;
                     }
@@ -223,7 +218,6 @@
             });
         };
 
-        // 테이블 전체 결제 완료 처리
         async function payTable(tableName, jsonOrderIds) {
             const orderIds = JSON.parse(jsonOrderIds);
             if(confirm(`[${tableName}] 테이블의 모든 주문을 결제 완료 처리하시겠습니까?`)) {
@@ -240,18 +234,15 @@
             }
         }
 
-        // 매출표 팝업 열기
         function openSalesModal() {
             document.getElementById('sales-modal').style.display = 'flex';
             loadSalesData();
         }
 
-        // 매출표 팝업 닫기
         function closeSalesModal() {
             document.getElementById('sales-modal').style.display = 'none';
         }
 
-        // 매출 데이터 조회
         async function loadSalesData() {
             const selectedMonth = document.getElementById('month-select').value;
             if (!selectedMonth) return;
@@ -270,7 +261,7 @@
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    if (data.paid) {
+                    if (data.paid && !data.isCallStaff) {
                         const orderDate = new Date(data.timestamp);
                         const orderYearMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
 
@@ -307,7 +298,6 @@
             }
         }
 
-        // 매출표 초기화 (비밀번호 0146 확인)
         async function resetSalesData() {
             const selectedMonth = document.getElementById('month-select').value;
             if (!selectedMonth) return;
