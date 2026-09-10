@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -10,6 +10,9 @@
         .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
         h1.store-title { text-align: center; color: #4a3b32; margin-bottom: 15px; font-size: 28px; font-weight: 800; word-break: keep-all; }
         
+        /* 주방지연 안내 문구 스타일 */
+        .notice-box { background: #fdf2e9; border: 1px solid #fadbd8; color: #78281f; padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; margin-bottom: 15px; text-align: center; word-break: keep-all; }
+
         /* 손님용 주문 방법 안내 박스 */
         .guide-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; line-height: 1.5; }
         .guide-title { font-weight: bold; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
@@ -75,6 +78,11 @@
     <div class="card" id="order-form">
         <h1 class="store-title">🌾 오셨뜨래요 메밀여행</h1>
         
+        <!-- 주방 지연 안내 문구 추가 -->
+        <div class="notice-box">
+            ⚠️ <b>안내말씀:</b> 주방 인원이 부족하여 주문이 밀릴 경우 조리 시간이 다소 걸릴 수 있습니다. 너른 양해 부탁드립니다.
+        </div>
+
         <!-- 쉬운 주문 방법 안내 상자 -->
         <div class="guide-box">
             <div class="guide-title">📌 쉬운 주문 방법</div>
