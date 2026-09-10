@@ -3,49 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>통합 관리자 - 오셨뜨래요 메밀여행</title>
+    <title>오셨드레요 메밀여행 - 2개 주방 실시간 주문 POS</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
-        body { background-color: #f5f5f5; padding: 15px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .sales-box { background: #e8f5e9; padding: 10px 15px; border-radius: 8px; text-align: right; }
-        .soldout-box { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .soldout-item { display: inline-block; padding: 5px 10px; margin: 3px; border-radius: 15px; background: #eee; cursor: pointer; font-size: 13px; }
-        .soldout-item.active { background: #d32f2f; color: #fff; font-weight: bold; }
+        body { background-color: #2c3e50; color: #333; padding: 15px; }
+        header { display: flex; flex-direction: column; gap: 12px; color: #fff; margin-bottom: 20px; }
+        h1 { font-size: 26px; font-weight: 800; text-align: center; }
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
-        .card { background: #fff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 5px solid #ccc; }
-        .card.unpaid { border-top-color: #ff9800; }
-        .card.paid { border-top-color: #4caf50; }
-        .card.completed { opacity: 0.6; }
-        
-        .card-title { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .top-btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .sound-btn { background: #e74c3c; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .sound-btn.active { background: #27ae60; }
+        .soldout-manage-btn { background: #f39c12; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
 
-        /* --- 1번 주방 / 2번 주방 구분을 위한 스타일 개편 --- */
-        .kitchen-sec { margin-bottom: 10px; padding: 10px; border-radius: 6px; }
+        .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+        .order-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 6px 12px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: space-between; min-height: 220px; }
+        .order-card.k1-card { border-top: 8px solid #d35400; }
+        .order-card.k2-card { border-top: 8px solid #2980b9; }
+        .order-card.call-card { border-top: 8px solid #e74c3c; background-color: #fff5f5; }
+        .order-card.new { animation: pulse 1.5s infinite; }
         
-        /* 1번 주방: 따뜻한 주황/브라운 톤 */
-        .kitchen-sec.k1 { background-color: #fffaf0; border: 1px solid #ffe0b2; }
-        .k1-title { color: #e65100; font-weight: bold; border-bottom: 1px solid #ffe0b2; }
-        
-        /* 2번 주방: 시원한 파란색 톤 */
-        .kitchen-sec.k2 { background-color: #f0f7ff; border: 1px solid #bbdefb; }
-        .k2-title { color: #0d47a1; font-weight: bold; border-bottom: 1px solid #bbdefb; }
+        .order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 12px; margin-bottom: 12px; }
+        .table-badge { background: #e74c3c; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 20px; font-weight: 900; }
+        .kitchen-tag { font-size: 15px; font-weight: bold; padding: 5px 10px; border-radius: 6px; }
+        .tag-k1 { background: #fdebd0; color: #d35400; }
+        .tag-k2 { background: #ebf5fb; color: #2980b9; }
+        .tag-call { background: #fadbd8; color: #78281f; }
 
-        .kitchen-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 4px; font-size: 13px; }
-        .item-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px; }
-        
-        .btn { padding: 4px 8px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; }
-        .btn-new { background: #e74c3c; color: #fff; }
-        .btn-done { background: #2ecc71; color: #fff; }
-        .btn-pay { width: 100%; padding: 8px; margin-top: 5px; background: #ff9800; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .btn-pay.paid { background: #4caf50; }
-        .btn-del { width: 100%; padding: 6px; margin-top: 5px; background: #999; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .item-list { margin-bottom: 15px; }
+        .item-row { display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 8px; padding: 6px 0; border-bottom: 1px dashed #e0e0e0; }
+        .item-name { font-weight: 800; }
+        .item-qty { color: #c0392b; font-size: 22px; font-weight: 900; }
+
+        .order-footer { border-top: 2px solid #eee; padding-top: 12px; }
+        .btn-status { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; color: #fff; }
+        .btn-accept { background: #e67e22; }
+        .btn-done { background: #27ae60; }
+
+        /* 모달 (팝업창) 스타일 */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: #fff; width: 100%; max-width: 500px; border-radius: 12px; padding: 20px; max-height: 85vh; overflow-y: auto; }
+        .modal-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .modal-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 18px; font-weight: bold; }
+        .modal-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .btn-in-stock { background: #27ae60; color: #fff; }
+        .btn-sold-out { background: #e74c3c; color: #fff; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
     </style>
 
+    <!-- Firebase SDK 모듈 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAceyCFUzGg5fz5pPWt9H6RgE3wrQe0ob4",
@@ -60,117 +73,287 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const menuList = ["메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전", "메밀물막국수", "메밀비빔막국수", "메밀들기름막국수", "메밀묵사발", "감자옹심이", "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"];
-        let soldOuts = [];
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
 
-        onSnapshot(doc(db, "settings", "soldout"), (d) => {
-            soldOuts = d.exists() ? (d.data().items || []) : [];
-            const container = document.getElementById('soldout-list');
+        let initialLoad = true;
+        let knownOrderIds = new Set();
+
+        const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
+        onSnapshot(q, (snapshot) => {
+            const container = document.getElementById('orders-container');
             container.innerHTML = '';
-            menuList.forEach(m => {
-                const el = document.createElement('span');
-                const isSo = soldOuts.includes(m);
-                el.className = `soldout-item ${isSo ? 'active' : ''}`;
-                el.innerText = isSo ? `🚫 ${m}` : m;
-                el.onclick = async () => {
-                    let next = isSo ? soldOuts.filter(x => x !== m) : [...soldOuts, m];
-                    await setDoc(doc(db, "settings", "soldout"), { items: next });
-                };
-                container.appendChild(el);
+            let cardCount = 0;
+
+            snapshot.docs.forEach(docSnap => {
+                const order = docSnap.data();
+                const docId = docSnap.id;
+
+                if (!initialLoad && !knownOrderIds.has(docId)) {
+                    playVoiceAlert();
+                }
+                knownOrderIds.add(docId);
+
+                const isCall = order.items && order.items.some(i => i.name.includes("직원 호출"));
+
+                if (isCall) {
+                    if (order.k1Status !== '완료') {
+                        cardCount++;
+                        const isNew = order.k1Status === '신규주문';
+                        const cardCall = document.createElement('div');
+                        cardCall.className = `order-card call-card ${isNew ? 'new' : ''}`;
+
+                        cardCall.innerHTML = `
+                            <div>
+                                <div class="order-header">
+                                    <div>
+                                        <span class="table-badge">${order.table}</span>
+                                        <span class="kitchen-tag tag-call">🔔 직원 호출</span>
+                                    </div>
+                                    <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
+                                </div>
+                                <div class="item-list">
+                                    <div class="item-row" style="color: #c0392b; font-weight: bold; font-size: 22px;">
+                                        <span>🔔 물 / 반찬 / 직원 호출</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="order-footer">
+                                <button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k1Status', '완료')">✅ 응대 완료</button>
+                            </div>
+                        `;
+                        container.appendChild(cardCall);
+                    }
+                } else {
+                    let k1List = [];
+                    let k2List = [];
+
+                    if (order.items && order.items.length > 0) {
+                        order.items.forEach(item => {
+                            if (item.name.includes('사리추가')) {
+                                k2List.push(item);
+                            } else if (order.kitchen1 && order.kitchen1.some(k1 => k1.name === item.name)) {
+                                k1List.push(item);
+                            } else if (order.kitchen2 && order.kitchen2.some(k2 => k2.name === item.name)) {
+                                k2List.push(item);
+                            } else {
+                                k1List.push(item);
+                            }
+                        });
+                    }
+
+                    if (k1List.length > 0 && order.k1Status !== '완료') {
+                        cardCount++;
+                        const isNew = order.k1Status === '신규주문';
+                        const card1 = document.createElement('div');
+                        card1.className = `order-card k1-card ${isNew ? 'new' : ''}`;
+
+                        let itemsHtml = '';
+                        k1List.forEach(item => {
+                            itemsHtml += `<div class="item-row"><span class="item-name">${item.name}</span> <span class="item-qty">${item.qty}개</span></div>`;
+                        });
+
+                        let btnHtml = isNew ?
+                            `<button class="btn-status btn-accept" onclick="updateStatus('${docId}', 'k1Status', '조리중')">📥 [주방1] 조리 시작</button>` :
+                            `<button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k1Status', '완료')">✅ [주방1] 조리 완료</button>`;
+
+                        card1.innerHTML = `
+                            <div>
+                                <div class="order-header">
+                                    <div>
+                                        <span class="table-badge">${order.table}</span>
+                                        <span class="kitchen-tag tag-k1">🍳 1번 주방 (전/부침/주류)</span>
+                                    </div>
+                                    <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
+                                </div>
+                                <div class="item-list">${itemsHtml}</div>
+                            </div>
+                            <div class="order-footer">${btnHtml}</div>
+                        `;
+                        container.appendChild(card1);
+                    }
+
+                    if (k2List.length > 0 && order.k2Status !== '완료') {
+                        cardCount++;
+                        const isNew = order.k2Status === '신규주문';
+                        const card2 = document.createElement('div');
+                        card2.className = `order-card k2-card ${isNew ? 'new' : ''}`;
+
+                        let itemsHtml = '';
+                        k2List.forEach(item => {
+                            itemsHtml += `<div class="item-row"><span class="item-name">${item.name}</span> <span class="item-qty">${item.qty}개</span></div>`;
+                        });
+
+                        let btnHtml = isNew ?
+                            `<button class="btn-status btn-accept" onclick="updateStatus('${docId}', 'k2Status', '조리중')">📥 [주방2] 조리 시작</button>` :
+                            `<button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k2Status', '완료')">✅ [주방2] 조리 완료</button>`;
+
+                        card2.innerHTML = `
+                            <div>
+                                <div class="order-header">
+                                    <div>
+                                        <span class="table-badge">${order.table}</span>
+                                        <span class="kitchen-tag tag-k2">🍜 2번 주방 (국수/식사류)</span>
+                                    </div>
+                                    <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
+                                </div>
+                                <div class="item-list">${itemsHtml}</div>
+                            </div>
+                            <div class="order-footer">${btnHtml}</div>
+                        `;
+                        container.appendChild(card2);
+                    }
+                }
             });
+
+            if (cardCount === 0) {
+                container.innerHTML = '<div style="color:#fff; text-align:center; grid-column: 1/-1; padding: 50px 0; font-size: 20px;">현재 대기 중인 주방 주문이 없습니다.</div>';
+            }
+
+            initialLoad = false;
         });
 
-        onSnapshot(collection(db, "orders"), (s) => {
-            let total = 0;
-            const orders = [];
-            s.forEach(d => {
-                const data = d.data();
-                data.id = d.id;
-                orders.push(data);
-                if (data.paid) total += (data.total || 0);
-            });
+        window.updateStatus = async function(docId, key, status) {
+            const docRef = doc(db, "orders", docId);
+            await updateDoc(docRef, { [key]: status });
+        };
 
-            orders.sort((a,b) => b.timestamp - a.timestamp);
+        // 품절 상태 불러오기 및 관리 기능
+        window.currentSoldOuts = [];
 
-            document.getElementById('total-sales').innerText = total.toLocaleString() + '원';
-            const grid = document.getElementById('orders-grid');
-            grid.innerHTML = '';
-
-            orders.forEach(o => {
-                const isDone = o.k1Status === '완료' && o.k2Status === '완료';
-                const card = document.createElement('div');
-                card.className = `card ${o.paid ? 'paid' : 'unpaid'} ${isDone && o.paid ? 'completed' : ''}`;
-
-                /* 1번 주방 영역 */
-                let k1 = '';
-                if (o.kitchen1 && o.kitchen1.length > 0) {
-                    const items = o.kitchen1.map(i => `<div class="item-row"><span>${i.name}</span><b>${i.qty}개</b></div>`).join('');
-                    k1 = `
-                        <div class="kitchen-sec k1">
-                            <div class="kitchen-header-row k1-title">
-                                <span>🍳 1번 주방 (전/부침/주류)</span>
-                                <button class="btn ${o.k1Status==='신규주문'?'btn-new':'btn-done'}" onclick="updateStatus('${o.id}', 'k1Status', '${o.k1Status}')">${o.k1Status}</button>
-                            </div>
-                            ${items}
-                        </div>`;
-                }
-
-                /* 2번 주방 영역 */
-                let k2 = '';
-                if (o.kitchen2 && o.kitchen2.length > 0) {
-                    const items = o.kitchen2.map(i => `<div class="item-row"><span>${i.name}</span><b>${i.qty}개</b></div>`).join('');
-                    k2 = `
-                        <div class="kitchen-sec k2">
-                            <div class="kitchen-header-row k2-title">
-                                <span>🍜 2번 주방 (국수/식사류)</span>
-                                <button class="btn ${o.k2Status==='신규주문'?'btn-new':'btn-done'}" onclick="updateStatus('${o.id}', 'k2Status', '${o.k2Status}')">${o.k2Status}</button>
-                            </div>
-                            ${items}
-                        </div>`;
-                }
-
-                card.innerHTML = `
-                    <div class="card-title">
-                        <span>${o.table}</span>
-                        <span style="font-size:12px; color:#666;">${o.time}</span>
-                    </div>
-                    ${k1}
-                    ${k2}
-                    <div style="text-align:right; font-weight:bold; margin:10px 0;">합계: ${(o.total||0).toLocaleString()}원</div>
-                    <button class="btn-pay ${o.paid?'paid':''}" onclick="togglePay('${o.id}', ${o.paid})">${o.paid?'결제완료':'결제하기'}</button>
-                    <button class="btn-del" onclick="delOrder('${o.id}')">삭제</button>
-                `;
-                grid.appendChild(card);
-            });
+        onSnapshot(doc(db, "settings", "soldout"), (docSnap) => {
+            if (docSnap.exists()) {
+                window.currentSoldOuts = docSnap.data().items || [];
+            } else {
+                window.currentSoldOuts = [];
+            }
+            renderSoldOutModalList();
         });
 
-        window.updateStatus = async (id, f, c) => {
-            await updateDoc(doc(db, "orders", id), { [f]: c === '신규주문' ? '완료' : '신규주문' });
-        };
-        window.togglePay = async (id, p) => {
-            await updateDoc(doc(db, "orders", id), { paid: !p });
-        };
-        window.delOrder = async (id) => {
-            if (confirm("삭제하시겠습니까?")) await deleteDoc(doc(db, "orders", id));
+        window.toggleSoldOut = async function(menuName) {
+            let list = [...window.currentSoldOuts];
+            if (list.includes(menuName)) {
+                list = list.filter(m => m !== menuName);
+            } else {
+                list.push(menuName);
+            }
+            await setDoc(doc(db, "settings", "soldout"), { items: list });
         };
     </script>
 </head>
 <body>
+    <header>
+        <h1>🌾 오셨드레요 메밀여행 - 주방 POS</h1>
+        <div class="top-btn-group">
+            <button id="soundBtn" class="sound-btn" onclick="enableSound()">🔈 [필수] 소리 켜기</button>
+            <button class="soldout-manage-btn" onclick="openSoldOutModal()">🚫 메뉴 품절/재고 관리</button>
+        </div>
+    </header>
 
-    <div class="header">
-        <h2>🌾 통합 관리자</h2>
-        <div class="sales-box">
-            <small>오늘 매출</small><br>
-            <b id="total-sales" style="font-size:20px;">0원</b>
+    <div class="orders-grid" id="orders-container"></div>
+
+    <!-- 품절 설정 모달 팝업 -->
+    <div class="modal-overlay" id="soldout-modal">
+        <div class="modal-content">
+            <div class="modal-title">🚫 재료 소진 / 품절 설정</div>
+            <div id="soldout-item-list"></div>
+            <button class="btn-status" style="background:#555; margin-top:20px;" onclick="closeSoldOutModal()">닫기</button>
         </div>
     </div>
 
-    <div class="soldout-box">
-        <b>🚫 품절 설정 (클릭 시 변경):</b>
-        <div id="soldout-list" style="margin-top:5px;"></div>
-    </div>
+    <script>
+        const allMenuList = [
+            "메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전",
+            "메밀물막국수", "메밀비빔막국수", "메밀들기름막국수", "메밀묵사발", "감자옹심이",
+            "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"
+        ];
 
-    <div class="grid" id="orders-grid"></div>
+        function openSoldOutModal() {
+            renderSoldOutModalList();
+            document.getElementById('soldout-modal').style.display = 'flex';
+        }
 
+        function closeSoldOutModal() {
+            document.getElementById('soldout-modal').style.display = 'none';
+        }
+
+        function renderSoldOutModalList() {
+            const listDiv = document.getElementById('soldout-item-list');
+            if (!listDiv) return;
+            listDiv.innerHTML = '';
+
+            const soldOuts = window.currentSoldOuts || [];
+
+            allMenuList.forEach(name => {
+                const isSoldOut = soldOuts.includes(name);
+                const row = document.createElement('div');
+                row.className = 'modal-item';
+                row.innerHTML = `
+                    <span>${name}</span>
+                    <button class="modal-btn ${isSoldOut ? 'btn-sold-out' : 'btn-in-stock'}" onclick="window.toggleSoldOut('${name}')">
+                        ${isSoldOut ? '🔴 품절 중' : '🟢 판매 중'}
+                    </button>
+                `;
+                listDiv.appendChild(row);
+            });
+        }
+
+        window.enableSound = function() {
+            playVoiceAlert();
+            const btn = document.getElementById('soundBtn');
+            btn.className = 'sound-btn active';
+            btn.innerHTML = '🔊 알림음 설정완료';
+        };
+
+        function playDingDong(audioCtx) {
+            const now = audioCtx.currentTime;
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(783.99, now);
+            gain1.gain.setValueAtTime(0.5, now);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.5);
+
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(659.25, now + 0.3);
+            gain2.gain.setValueAtTime(0.6, now + 0.3);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start(now + 0.3);
+            osc2.stop(now + 0.9);
+        }
+
+        function playVoiceAlert() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                playDingDong(audioCtx);
+            } catch (e) {
+                console.log("Audio Error:", e);
+            }
+
+            if ('speechSynthesis' in window) {
+                setTimeout(() => {
+                    window.speechSynthesis.cancel();
+                    const msg = new SpeechSynthesisUtterance("주문이 들어왔습니다!");
+                    msg.lang = 'ko-KR';
+                    msg.volume = 1.0;
+                    msg.rate = 0.9;
+                    msg.pitch = 1.1;
+                    window.speechSynthesis.speak(msg);
+                }, 800);
+            }
+        }
+    </script>
 </body>
 </html>
