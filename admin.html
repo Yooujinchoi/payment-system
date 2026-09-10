@@ -14,6 +14,7 @@
         .sound-btn { background: #e74c3c; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         .sound-btn.active { background: #27ae60; }
         .soldout-manage-btn { background: #f39c12; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .history-btn { background: #2980b9; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
 
         .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
         .order-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 6px 12px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: space-between; min-height: 220px; }
@@ -41,12 +42,20 @@
 
         /* 모달 (팝업창) 스타일 */
         .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; padding: 20px; }
-        .modal-content { background: #fff; width: 100%; max-width: 500px; border-radius: 12px; padding: 20px; max-height: 85vh; overflow-y: auto; }
+        .modal-content { background: #fff; width: 100%; max-width: 600px; border-radius: 12px; padding: 20px; max-height: 85vh; overflow-y: auto; }
         .modal-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .modal-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 18px; font-weight: bold; }
         .modal-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
         .btn-in-stock { background: #27ae60; color: #fff; }
         .btn-sold-out { background: #e74c3c; color: #fff; }
+
+        /* 기록 모달 전용 스타일 */
+        .summary-box { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .summary-title { font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+        .summary-item { font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; background: #fff; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee; }
+        .history-card { background: #f9f9f9; border-left: 5px solid #2980b9; padding: 10px 14px; margin-bottom: 10px; border-radius: 6px; }
+        .history-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
@@ -79,16 +88,21 @@
 
         let initialLoad = true;
         let knownOrderIds = new Set();
+        window.allOrdersList = []; // 기록 모달용 글로벌 저장소
 
         const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
         onSnapshot(q, (snapshot) => {
             const container = document.getElementById('orders-container');
             container.innerHTML = '';
             let cardCount = 0;
+            window.allOrdersList = [];
 
             snapshot.docs.forEach(docSnap => {
                 const order = docSnap.data();
                 const docId = docSnap.id;
+                
+                // 전체 주문 목록 보관 (기록 기능용)
+                window.allOrdersList.push({ id: docId, ...order });
 
                 if (!initialLoad && !knownOrderIds.has(docId)) {
                     playVoiceAlert();
@@ -248,6 +262,7 @@
         <div class="top-btn-group">
             <button id="soundBtn" class="sound-btn" onclick="enableSound()">🔈 [필수] 소리 켜기</button>
             <button class="soldout-manage-btn" onclick="openSoldOutModal()">🚫 메뉴 품절/재고 관리</button>
+            <button class="history-btn" onclick="openHistoryModal()">📜 주문 및 판매 기록</button>
         </div>
     </header>
 
@@ -259,6 +274,25 @@
             <div class="modal-title">🚫 재료 소진 / 품절 설정</div>
             <div id="soldout-item-list"></div>
             <button class="btn-status" style="background:#555; margin-top:20px;" onclick="closeSoldOutModal()">닫기</button>
+        </div>
+    </div>
+
+    <!-- 주문 기록 모달 팝업 -->
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal-content">
+            <div class="modal-title">📜 전체 누적 주문 및 메뉴별 판매 갯수</div>
+            
+            <!-- 메뉴별 판매 누적 집계 영역 -->
+            <div class="summary-box">
+                <div class="summary-title">📊 메뉴별 총 누적 수량</div>
+                <div class="summary-grid" id="history-summary"></div>
+            </div>
+
+            <!-- 시각별 주문 전체 목록 영역 -->
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">📋 상세 주문 기록 (최신순)</div>
+            <div id="history-item-list"></div>
+
+            <button class="btn-status" style="background:#555; margin-top:20px;" onclick="closeHistoryModal()">닫기</button>
         </div>
     </div>
 
@@ -296,6 +330,78 @@
                     </button>
                 `;
                 listDiv.appendChild(row);
+            });
+        }
+
+        /* 📜 주문 및 판매 기록 모달 로직 */
+        function openHistoryModal() {
+            renderHistoryModal();
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').style.display = 'none';
+        }
+
+        function renderHistoryModal() {
+            const summaryDiv = document.getElementById('history-summary');
+            const listDiv = document.getElementById('history-item-list');
+            if (!summaryDiv || !listDiv) return;
+
+            summaryDiv.innerHTML = '';
+            listDiv.innerHTML = '';
+
+            const orders = window.allOrdersList || [];
+
+            if (orders.length === 0) {
+                listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:#666;">기록된 주문이 없습니다.</div>';
+                return;
+            }
+
+            // 1. 메뉴별 판매 갯수 집계
+            const counts = {};
+            orders.forEach(order => {
+                if (order.items && Array.isArray(order.items)) {
+                    order.items.forEach(item => {
+                        if (!item.name.includes("직원 호출")) {
+                            counts[item.name] = (counts[item.name] || 0) + (parseInt(item.qty) || 1);
+                        }
+                    });
+                }
+            });
+
+            // 집계 화면 출력
+            const keys = Object.keys(counts);
+            if (keys.length === 0) {
+                summaryDiv.innerHTML = '<div style="font-size:14px; color:#888;">판매된 일반 메뉴가 없습니다.</div>';
+            } else {
+                keys.forEach(menuName => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'summary-item';
+                    itemEl.innerHTML = `<span>${menuName}</span> <span style="color:#e74c3c; font-weight:bold;">${counts[menuName]}개</span>`;
+                    summaryDiv.appendChild(itemEl);
+                });
+            }
+
+            // 2. 상세 내역 역순(최신순) 정렬 및 출력
+            const reversedOrders = [...orders].reverse();
+            reversedOrders.forEach(order => {
+                const card = document.createElement('div');
+                card.className = 'history-card';
+
+                let itemsText = '';
+                if (order.items && Array.isArray(order.items)) {
+                    itemsText = order.items.map(i => `${i.name} (${i.qty}개)`).join(', ');
+                }
+
+                card.innerHTML = `
+                    <div class="history-header">
+                        <span>테이블: ${order.table || '미지정'}</span>
+                        <span style="color:#7f8c8d; font-size:14px;">${order.time || ''}</span>
+                    </div>
+                    <div style="font-size:15px; color:#333;">${itemsText || '내역 없음'}</div>
+                `;
+                listDiv.appendChild(card);
             });
         }
 
