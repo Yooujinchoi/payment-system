@@ -3,62 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>오셨드레요 메밀여행 - 2개 주방 실시간 주문 POS</title>
+    <title>오셨뜨래요 메밀여행 - 통합 관리자 시스템</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
-        body { background-color: #2c3e50; color: #333; padding: 15px; }
-        header { display: flex; flex-direction: column; gap: 12px; color: #fff; margin-bottom: 20px; }
-        h1 { font-size: 26px; font-weight: 800; text-align: center; }
+        body { background-color: #f0f2f5; color: #333; padding: 20px; }
         
-        .top-btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .sound-btn { background: #e74c3c; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-        .sound-btn.active { background: #27ae60; }
-        .soldout-manage-btn { background: #f39c12; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
+        .header h1 { font-size: 22px; color: #1a1a1a; display: flex; align-items: center; gap: 8px; }
 
-        .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
-        .order-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 6px 12px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: space-between; min-height: 220px; }
-        .order-card.k1-card { border-top: 8px solid #d35400; }
-        .order-card.k2-card { border-top: 8px solid #2980b9; }
-        .order-card.call-card { border-top: 8px solid #e74c3c; background-color: #fff5f5; }
-        .order-card.new { animation: pulse 1.5s infinite; }
+        .sales-card { background: #e8f5e9; border: 1px solid #c8e6c9; padding: 12px 20px; border-radius: 10px; text-align: right; }
+        .sales-title { font-size: 13px; color: #2e7d32; font-weight: bold; }
+        .sales-amount { font-size: 24px; color: #1b5e20; font-weight: 800; }
+
+        /* 품절 관리 영역 */
+        .soldout-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 25px; }
+        .soldout-card-title { font-size: 16px; font-weight: bold; color: #d32f2f; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .soldout-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .soldout-btn { padding: 8px 14px; border-radius: 20px; background: #f5f5f5; border: 1px solid #ddd; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; user-select: none; }
+        .soldout-btn.active { background: #d32f2f; color: #fff; border-color: #b71c1c; font-weight: bold; }
+
+        /* 주문 현황 그리드 */
+        .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
         
-        .order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 12px; margin-bottom: 12px; }
-        .table-badge { background: #e74c3c; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 20px; font-weight: 900; }
-        .kitchen-tag { font-size: 15px; font-weight: bold; padding: 5px 10px; border-radius: 6px; }
-        .tag-k1 { background: #fdebd0; color: #d35400; }
-        .tag-k2 { background: #ebf5fb; color: #2980b9; }
-        .tag-call { background: #fadbd8; color: #78281f; }
+        .order-card { background: #fff; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; border: 2px solid #e0e0e0; display: flex; flex-direction: column; transition: transform 0.2s; }
+        .order-card.unpaid { border-color: #ff9800; }
+        .order-card.paid { border-color: #4caf50; }
+        .order-card.completed { opacity: 0.65; border-color: #bdbdbd; }
 
-        .item-list { margin-bottom: 15px; }
-        .item-row { display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 8px; padding: 6px 0; border-bottom: 1px dashed #e0e0e0; }
-        .item-name { font-weight: 800; }
-        .item-qty { color: #c0392b; font-size: 22px; font-weight: 900; }
+        .card-head { padding: 14px 18px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .table-name { font-size: 19px; font-weight: 800; color: #111; }
+        .order-time { font-size: 13px; color: #666; font-weight: 500; }
 
-        .order-footer { border-top: 2px solid #eee; padding-top: 12px; }
-        .btn-status { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; color: #fff; }
-        .btn-accept { background: #e67e22; }
-        .btn-done { background: #27ae60; }
+        .card-body { padding: 16px; flex: 1; }
 
-        /* 모달 (팝업창) 스타일 */
-        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; padding: 20px; }
-        .modal-content { background: #fff; width: 100%; max-width: 500px; border-radius: 12px; padding: 20px; max-height: 85vh; overflow-y: auto; }
-        .modal-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .modal-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 18px; font-weight: bold; }
-        .modal-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .btn-in-stock { background: #27ae60; color: #fff; }
-        .btn-sold-out { background: #e74c3c; color: #fff; }
+        /* 1번 / 2번 주방 구분 스타일 */
+        .kitchen-box { margin-bottom: 12px; padding: 12px; border-radius: 10px; border: 1px solid #eee; }
+        
+        /* 1번 주방 (전/부침/주류) -> 주황/브라운 톤 */
+        .k1-box { background-color: #fffaf0; border: 1px solid #ffe0b2; }
+        .k1-title { color: #e65100; border-bottom: 1px solid #ffe0b2; }
+        .k1-badge { background-color: #ef6c00; color: #fff; }
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
-        }
+        /* 2번 주방 (국수/식사류) -> 파란색 톤 */
+        .k2-box { background-color: #f0f7ff; border: 1px solid #bbdefb; }
+        .k2-title { color: #0d47a1; border-bottom: 1px solid #bbdefb; }
+        .k2-badge { background-color: #1976d2; color: #fff; }
+
+        .kitchen-head-title { font-size: 13px; font-weight: bold; padding-bottom: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .kitchen-badge-tag { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+
+        .menu-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 15px; font-weight: 600; }
+        .menu-qty { color: #d32f2f; font-weight: 800; }
+
+        .status-btn { padding: 5px 10px; border-radius: 6px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .status-btn.new { background: #e74c3c; color: #fff; }
+        .status-btn.done { background: #2ecc71; color: #fff; }
+
+        .card-foot { padding: 14px 18px; background: #fafafa; border-top: 1px solid #eee; }
+        .total-price-row { display: flex; justify-content: space-between; font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+        
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn-pay-status { padding: 10px; background: #ff9800; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn-pay-status.paid { background: #4caf50; }
+        .btn-delete-order { padding: 10px; background: #9e9e9e; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
     </style>
 
     <!-- Firebase SDK 모듈 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAceyCFUzGg5fz5pPWt9H6RgE3wrQe0ob4",
@@ -73,287 +86,166 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        window.db = db;
-        window.doc = doc;
-        window.setDoc = setDoc;
-
-        let initialLoad = true;
-        let knownOrderIds = new Set();
-
-        const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
-        onSnapshot(q, (snapshot) => {
-            const container = document.getElementById('orders-container');
-            container.innerHTML = '';
-            let cardCount = 0;
-
-            snapshot.docs.forEach(docSnap => {
-                const order = docSnap.data();
-                const docId = docSnap.id;
-
-                if (!initialLoad && !knownOrderIds.has(docId)) {
-                    playVoiceAlert();
-                }
-                knownOrderIds.add(docId);
-
-                const isCall = order.items && order.items.some(i => i.name.includes("직원 호출"));
-
-                if (isCall) {
-                    if (order.k1Status !== '완료') {
-                        cardCount++;
-                        const isNew = order.k1Status === '신규주문';
-                        const cardCall = document.createElement('div');
-                        cardCall.className = `order-card call-card ${isNew ? 'new' : ''}`;
-
-                        cardCall.innerHTML = `
-                            <div>
-                                <div class="order-header">
-                                    <div>
-                                        <span class="table-badge">${order.table}</span>
-                                        <span class="kitchen-tag tag-call">🔔 직원 호출</span>
-                                    </div>
-                                    <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
-                                </div>
-                                <div class="item-list">
-                                    <div class="item-row" style="color: #c0392b; font-weight: bold; font-size: 22px;">
-                                        <span>🔔 물 / 반찬 / 직원 호출</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="order-footer">
-                                <button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k1Status', '완료')">✅ 응대 완료</button>
-                            </div>
-                        `;
-                        container.appendChild(cardCall);
-                    }
-                } else {
-                    let k1List = [];
-                    let k2List = [];
-
-                    if (order.items && order.items.length > 0) {
-                        order.items.forEach(item => {
-                            if (item.name.includes('사리추가')) {
-                                k2List.push(item);
-                            } else if (order.kitchen1 && order.kitchen1.some(k1 => k1.name === item.name)) {
-                                k1List.push(item);
-                            } else if (order.kitchen2 && order.kitchen2.some(k2 => k2.name === item.name)) {
-                                k2List.push(item);
-                            } else {
-                                k1List.push(item);
-                            }
-                        });
-                    }
-
-                    if (k1List.length > 0 && order.k1Status !== '완료') {
-                        cardCount++;
-                        const isNew = order.k1Status === '신규주문';
-                        const card1 = document.createElement('div');
-                        card1.className = `order-card k1-card ${isNew ? 'new' : ''}`;
-
-                        let itemsHtml = '';
-                        k1List.forEach(item => {
-                            itemsHtml += `<div class="item-row"><span class="item-name">${item.name}</span> <span class="item-qty">${item.qty}개</span></div>`;
-                        });
-
-                        let btnHtml = isNew ?
-                            `<button class="btn-status btn-accept" onclick="updateStatus('${docId}', 'k1Status', '조리중')">📥 [주방1] 조리 시작</button>` :
-                            `<button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k1Status', '완료')">✅ [주방1] 조리 완료</button>`;
-
-                        card1.innerHTML = `
-                            <div>
-                                <div class="order-header">
-                                    <div>
-                                        <span class="table-badge">${order.table}</span>
-                                        <span class="kitchen-tag tag-k1">🥞 주방 1 (전/주류)</span>
-                                    </div>
-                                    <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
-                                </div>
-                                <div class="item-list">${itemsHtml}</div>
-                            </div>
-                            <div class="order-footer">${btnHtml}</div>
-                        `;
-                        container.appendChild(card1);
-                    }
-
-                    if (k2List.length > 0 && order.k2Status !== '완료') {
-                        cardCount++;
-                        const isNew = order.k2Status === '신규주문';
-                        const card2 = document.createElement('div');
-                        card2.className = `order-card k2-card ${isNew ? 'new' : ''}`;
-
-                        let itemsHtml = '';
-                        k2List.forEach(item => {
-                            itemsHtml += `<div class="item-row"><span class="item-name">${item.name}</span> <span class="item-qty">${item.qty}개</span></div>`;
-                        });
-
-                        let btnHtml = isNew ?
-                            `<button class="btn-status btn-accept" onclick="updateStatus('${docId}', 'k2Status', '조리중')">📥 [주방2] 조리 시작</button>` :
-                            `<button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k2Status', '완료')">✅ [주방2] 조리 완료</button>`;
-
-                        card2.innerHTML = `
-                            <div>
-                                <div class="order-header">
-                                    <div>
-                                        <span class="table-badge">${order.table}</span>
-                                        <span class="kitchen-tag tag-k2">🍜 주방 2 (국수/식사)</span>
-                                    </div>
-                                    <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
-                                </div>
-                                <div class="item-list">${itemsHtml}</div>
-                            </div>
-                            <div class="order-footer">${btnHtml}</div>
-                        `;
-                        container.appendChild(card2);
-                    }
-                }
-            });
-
-            if (cardCount === 0) {
-                container.innerHTML = '<div style="color:#fff; text-align:center; grid-column: 1/-1; padding: 50px 0; font-size: 20px;">현재 대기 중인 주방 주문이 없습니다.</div>';
-            }
-
-            initialLoad = false;
-        });
-
-        window.updateStatus = async function(docId, key, status) {
-            const docRef = doc(db, "orders", docId);
-            await updateDoc(docRef, { [key]: status });
-        };
-
-        // 품절 상태 불러오기 및 관리 기능
-        window.currentSoldOuts = [];
-
-        onSnapshot(doc(db, "settings", "soldout"), (docSnap) => {
-            if (docSnap.exists()) {
-                window.currentSoldOuts = docSnap.data().items || [];
-            } else {
-                window.currentSoldOuts = [];
-            }
-            renderSoldOutModalList();
-        });
-
-        window.toggleSoldOut = async function(menuName) {
-            let list = [...window.currentSoldOuts];
-            if (list.includes(menuName)) {
-                list = list.filter(m => m !== menuName);
-            } else {
-                list.push(menuName);
-            }
-            await setDoc(doc(db, "settings", "soldout"), { items: list });
-        };
-    </script>
-</head>
-<body>
-    <header>
-        <h1>🌾 오셨드레요 메밀여행 - 주방 POS</h1>
-        <div class="top-btn-group">
-            <button id="soundBtn" class="sound-btn" onclick="enableSound()">🔈 [필수] 소리 켜기</button>
-            <button class="soldout-manage-btn" onclick="openSoldOutModal()">🚫 메뉴 품절/재고 관리</button>
-        </div>
-    </header>
-
-    <div class="orders-grid" id="orders-container"></div>
-
-    <!-- 품절 설정 모달 팝업 -->
-    <div class="modal-overlay" id="soldout-modal">
-        <div class="modal-content">
-            <div class="modal-title">🚫 재료 소진 / 품절 설정</div>
-            <div id="soldout-item-list"></div>
-            <button class="btn-status" style="background:#555; margin-top:20px;" onclick="closeSoldOutModal()">닫기</button>
-        </div>
-    </div>
-
-    <script>
-        const allMenuList = [
+        const allMenuItems = [
             "메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전",
             "메밀물막국수", "메밀비빔막국수", "메밀들기름막국수", "메밀묵사발", "감자옹심이",
             "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"
         ];
 
-        function openSoldOutModal() {
-            renderSoldOutModalList();
-            document.getElementById('soldout-modal').style.display = 'flex';
-        }
+        let soldOutItems = [];
 
-        function closeSoldOutModal() {
-            document.getElementById('soldout-modal').style.display = 'none';
-        }
+        // 품절 상태 실시간 감지
+        onSnapshot(doc(db, "settings", "soldout"), (docSnap) => {
+            if (docSnap.exists()) {
+                soldOutItems = docSnap.data().items || [];
+            } else {
+                soldOutItems = [];
+            }
+            renderSoldOutButtons();
+        });
 
-        function renderSoldOutModalList() {
-            const listDiv = document.getElementById('soldout-item-list');
-            if (!listDiv) return;
-            listDiv.innerHTML = '';
+        window.toggleSoldOut = async function(itemName) {
+            let updated = [...soldOutItems];
+            if (updated.includes(itemName)) {
+                updated = updated.filter(item => item !== itemName);
+            } else {
+                updated.push(itemName);
+            }
+            await setDoc(doc(db, "settings", "soldout"), { items: updated });
+        };
 
-            const soldOuts = window.currentSoldOuts || [];
-
-            allMenuList.forEach(name => {
-                const isSoldOut = soldOuts.includes(name);
-                const row = document.createElement('div');
-                row.className = 'modal-item';
-                row.innerHTML = `
-                    <span>${name}</span>
-                    <button class="modal-btn ${isSoldOut ? 'btn-sold-out' : 'btn-in-stock'}" onclick="window.toggleSoldOut('${name}')">
-                        ${isSoldOut ? '🔴 품절 중' : '🟢 판매 중'}
-                    </button>
-                `;
-                listDiv.appendChild(row);
+        function renderSoldOutButtons() {
+            const container = document.getElementById('soldout-list');
+            container.innerHTML = '';
+            allMenuItems.forEach(item => {
+                const isSoldOut = soldOutItems.includes(item);
+                const btn = document.createElement('div');
+                btn.className = `soldout-btn ${isSoldOut ? 'active' : ''}`;
+                btn.innerText = isSoldOut ? `🚫 ${item} (품절)` : item;
+                btn.onclick = () => window.toggleSoldOut(item);
+                container.appendChild(btn);
             });
         }
 
-        window.enableSound = function() {
-            playVoiceAlert();
-            const btn = document.getElementById('soundBtn');
-            btn.className = 'sound-btn active';
-            btn.innerHTML = '🔊 알림음 설정완료';
+        // 실시간 주문 수신 및 화면 업데이트
+        onSnapshot(collection(db, "orders"), (snapshot) => {
+            const orders = [];
+            let totalSales = 0;
+
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                data.id = doc.id;
+                orders.push(data);
+                if (data.paid) {
+                    totalSales += (data.total || 0);
+                }
+            });
+
+            orders.sort((a, b) => b.timestamp - a.timestamp);
+
+            document.getElementById('total-sales').innerText = totalSales.toLocaleString() + '원';
+            renderOrders(orders);
+        });
+
+        function renderOrders(orders) {
+            const container = document.getElementById('orders-container');
+            container.innerHTML = '';
+
+            orders.forEach(order => {
+                const isAllDone = order.k1Status === '완료' && order.k2Status === '완료';
+                const card = document.createElement('div');
+                card.className = `order-card ${order.paid ? 'paid' : 'unpaid'} ${isAllDone && order.paid ? 'completed' : ''}`;
+
+                let k1Html = '';
+                if (order.kitchen1 && order.kitchen1.length > 0) {
+                    const items = order.kitchen1.map(i => `<div class="menu-row"><span>${i.name}</span><span class="menu-qty">${i.qty}개</span></div>`).join('');
+                    const btnClass = order.k1Status === '신규주문' ? 'new' : 'done';
+                    k1Html = `
+                        <div class="kitchen-box k1-box">
+                            <div class="kitchen-head-title k1-title">
+                                <span class="kitchen-badge-tag k1-badge">🍳 1번 주방 (전/부침/주류)</span>
+                                <button class="status-btn ${btnClass}" onclick="toggleStatus('${order.id}', 'k1Status', '${order.k1Status}')">${order.k1Status}</button>
+                            </div>
+                            ${items}
+                        </div>
+                    `;
+                }
+
+                let k2Html = '';
+                if (order.kitchen2 && order.kitchen2.length > 0) {
+                    const items = order.kitchen2.map(i => `<div class="menu-row"><span>${i.name}</span><span class="menu-qty">${i.qty}개</span></div>`).join('');
+                    const btnClass = order.k2Status === '신규주문' ? 'new' : 'done';
+                    k2Html = `
+                        <div class="kitchen-box k2-box">
+                            <div class="kitchen-head-title k2-title">
+                                <span class="kitchen-badge-tag k2-badge">🍜 2번 주방 (국수/식사류)</span>
+                                <button class="status-btn ${btnClass}" onclick="toggleStatus('${order.id}', 'k2Status', '${order.k2Status}')">${order.k2Status}</button>
+                            </div>
+                            ${items}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="card-head">
+                        <span class="table-name">${order.table}</span>
+                        <span class="order-time">${order.time}</span>
+                    </div>
+                    <div class="card-body">
+                        ${k1Html}
+                        ${k2Html}
+                    </div>
+                    <div class="card-foot">
+                        <div class="total-price-row">
+                            <span>총 금액:</span>
+                            <span style="color:#d32f2f;">${(order.total || 0).toLocaleString()}원</span>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn-pay-status ${order.paid ? 'paid' : ''}" onclick="togglePay('${order.id}', ${order.paid})">
+                                ${order.paid ? '결제완료 ✓' : '결제하기'}
+                            </button>
+                            <button class="btn-delete-order" onclick="deleteOrder('${order.id}')">주문삭제</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        window.toggleStatus = async function(id, field, currentStatus) {
+            const nextStatus = currentStatus === '신규주문' ? '완료' : '신규주문';
+            await updateDoc(doc(db, "orders", id), { [field]: nextStatus });
         };
 
-        function playDingDong(audioCtx) {
-            const now = audioCtx.currentTime;
-            const osc1 = audioCtx.createOscillator();
-            const gain1 = audioCtx.createGain();
-            osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(783.99, now);
-            gain1.gain.setValueAtTime(0.5, now);
-            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-            osc1.connect(gain1);
-            gain1.connect(audioCtx.destination);
-            osc1.start(now);
-            osc1.stop(now + 0.5);
+        window.togglePay = async function(id, currentPaid) {
+            await updateDoc(doc(db, "orders", id), { paid: !currentPaid });
+        };
 
-            const osc2 = audioCtx.createOscillator();
-            const gain2 = audioCtx.createGain();
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(659.25, now + 0.3);
-            gain2.gain.setValueAtTime(0.6, now + 0.3);
-            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-            osc2.connect(gain2);
-            gain2.connect(audioCtx.destination);
-            osc2.start(now + 0.3);
-            osc2.stop(now + 0.9);
-        }
-
-        function playVoiceAlert() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                playDingDong(audioCtx);
-            } catch (e) {
-                console.log("Audio Error:", e);
+        window.deleteOrder = async function(id) {
+            if (confirm("이 주문을 정말로 삭제하시겠습니까?")) {
+                await deleteDoc(doc(db, "orders", id));
             }
-
-            if ('speechSynthesis' in window) {
-                setTimeout(() => {
-                    window.speechSynthesis.cancel();
-                    const msg = new SpeechSynthesisUtterance("주문이 들어왔습니다!");
-                    msg.lang = 'ko-KR';
-                    msg.volume = 1.0;
-                    msg.rate = 0.9;
-                    msg.pitch = 1.1;
-                    window.speechSynthesis.speak(msg);
-                }, 800);
-            }
-        }
+        };
     </script>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🌾 통합 관리자 (카운터 & 주방)</h1>
+        <div class="sales-card">
+            <div class="sales-title">오늘 누적 결제금액</div>
+            <div class="sales-amount" id="total-sales">0원</div>
+        </div>
+    </div>
+
+    <!-- 품절 관리 섹션 -->
+    <div class="soldout-card">
+        <div class="soldout-card-title">🚫 품절 메뉴 관리 (클릭 시 원클릭 품절 설정/해제)</div>
+        <div class="soldout-grid" id="soldout-list"></div>
+    </div>
+
+    <!-- 주문 현황 카드 리스트 -->
+    <div class="orders-grid" id="orders-container"></div>
+
 </body>
 </html>
