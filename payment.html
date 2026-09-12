@@ -14,9 +14,10 @@
         .header-btns { display: flex; gap: 8px; }
         .mode-btn { background-color: #f97316; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
         .sales-btn { background-color: #0284c7; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .history-btn { background-color: #059669; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
         .reset-btn { background-color: #dc2626; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
 
-        /* 메인 레이아웃 (좌측 테이블, 우측 메뉴패널) */
+        /* 메인 레이아웃 */
         .main-container { display: flex; gap: 15px; flex: 1; overflow: hidden; }
         .tables-section { flex: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 5px; }
 
@@ -31,6 +32,7 @@
         .order-time { font-size: 11px; color: #64748b; font-weight: normal; }
 
         .order-items { font-size: 12px; color: #475569; flex: 1; overflow-y: auto; line-height: 1.4; margin-bottom: 6px; }
+        .order-item-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
         .table-footer { text-align: right; font-weight: bold; color: #dc2626; font-size: 14px; border-top: 1px dashed #cbd5e1; padding-top: 4px; }
         .empty-text { color: #94a3b8; font-size: 12px; text-align: center; margin-top: 30px; }
 
@@ -46,19 +48,26 @@
 
         .divider { border-bottom: 1px dashed #334155; margin: 10px 0; }
 
-        /* 매출 모달 스타일 */
+        /* 모달 스타일 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #ffffff; color: #1e293b; padding: 20px; border-radius: 10px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+        .modal-content { background: #ffffff; color: #1e293b; padding: 20px; border-radius: 10px; width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
         .modal-close { background: #64748b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .sales-summary { background: #f1f5f9; padding: 12px; border-radius: 6px; margin-bottom: 15px; }
-        .sales-summary div { margin-bottom: 4px; font-size: 14px; }
+        .sales-summary { background: #f1f5f9; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .sales-summary div { font-size: 14px; }
         .sales-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .sales-table th, .sales-table td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; }
         .sales-table th { background: #f8fafc; font-weight: bold; }
+        .sales-table tr.highlight { background: #fef2f2; font-weight: bold; }
+
+        /* 최근 1주일 결제 내역 */
+        .history-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .history-card-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px; font-size: 14px; }
+        .history-item-row { display: flex; justify-content: space-between; font-size: 13px; color: #334155; margin-bottom: 4px; }
+        .history-card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 6px; font-weight: bold; color: #dc2626; font-size: 14px; }
     </style>
 
-    <!-- Firebase SDK 모듈 -->
+    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, onSnapshot, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -85,7 +94,6 @@
 
         let isInitialLoad = true;
 
-        // 테이블 주문 데이터 실시간 수신
         onSnapshot(collection(db, "orders"), (snapshot) => {
             const activeOrders = {};
 
@@ -113,7 +121,6 @@
             isInitialLoad = false;
         });
 
-        // 매출 전용 데이터 실시간 수신
         onSnapshot(collection(db, "sales"), (snapshot) => {
             window.salesHistory = [];
             snapshot.forEach((doc) => {
@@ -127,14 +134,14 @@
     <header>
         <h1>🖥️ 카운터 테이블 주문 및 자리 이동 관리</h1>
         <div class="header-btns">
-            <button class="sales-btn" onclick="openSalesModal()">📊 월간 매출표</button>
+            <button class="sales-btn" onclick="openSalesModal()">📊 연간 월별 매출표</button>
+            <button class="history-btn" onclick="openWeeklyHistoryModal()">📋 최근 1주일 결제 내역</button>
             <button class="mode-btn" id="move-mode-btn" onclick="toggleMoveMode()">🔄 자리 이동 모드: OFF</button>
             <button class="reset-btn" onclick="resetSalesData()">🧹 매출표 초기화</button>
         </div>
     </header>
 
     <div class="main-container">
-        <!-- 좌측 테이블 목록 -->
         <div class="tables-section">
             <div class="section-title">🏠 매장 테이블</div>
             <div class="tables-grid" id="indoor-grid"></div>
@@ -145,7 +152,6 @@
             <div class="tables-grid" id="terrace-grid"></div>
         </div>
 
-        <!-- 우측 메뉴 직접 추가 패널 -->
         <div class="side-panel">
             <div class="panel-title">➕ 메뉴 직접 추가</div>
             <div class="target-table-info" id="target-info">현재 선택: 1번 테이블</div>
@@ -156,29 +162,42 @@
         </div>
     </div>
 
-    <!-- 월간 매출 모달 창 -->
+    <!-- 연간 월별 매출 모달 -->
     <div class="modal" id="sales-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="sales-title">📊 당월 매출 집계표</h2>
+                <h2>📊 1월 ~ 12월 연간 매출 집계표</h2>
                 <button class="modal-close" onclick="closeSalesModal()">닫기</button>
             </div>
             <div class="sales-summary">
-                <div><strong>총 매출액:</strong> <span id="total-sales-amount" style="color:#c0392b; font-size:16px;">0</span>원</div>
-                <div><strong>총 결제 건수:</strong> <span id="total-order-count">0</span>건</div>
+                <div><strong>총 누적 매출액:</strong> <span id="total-sales-amount" style="color:#c0392b; font-size:16px; font-weight:bold;">0</span>원</div>
+                <div><strong>총 누적 결제 건수:</strong> <span id="total-order-count" style="font-weight:bold;">0</span>건</div>
             </div>
             <table class="sales-table">
                 <thead>
                     <tr>
-                        <th>메뉴명</th>
-                        <th>판매 수량</th>
-                        <th>합계 금액</th>
+                        <th>월</th>
+                        <th>결제 건수</th>
+                        <th>매출 금액</th>
                     </tr>
                 </thead>
-                <tbody id="sales-table-body">
-                    <tr><td colspan="3">매출 내역이 없습니다.</td></tr>
-                </tbody>
+                <tbody id="sales-table-body"></tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- 최근 1주일 결제 내역 모달 -->
+    <div class="modal" id="weekly-history-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 최근 1주일 결제 상세 내역</h2>
+                <button class="modal-close" onclick="closeWeeklyHistoryModal()">닫기</button>
+            </div>
+            <div class="sales-summary">
+                <div><strong>지난 7일간 총 매출액:</strong> <span id="weekly-total-amount" style="color:#059669; font-size:16px; font-weight:bold;">0</span>원</div>
+                <div><strong>지난 7일간 결제 건수:</strong> <span id="weekly-total-count" style="font-weight:bold;">0</span>건</div>
+            </div>
+            <div id="weekly-history-list"></div>
         </div>
     </div>
 
@@ -287,20 +306,40 @@
             card.onclick = () => selectTable(tableName);
 
             let totalAmount = 0;
-            let itemsHtml = '';
             let latestTime = '';
+
+            const mergedItems = {};
 
             orders.forEach(ord => {
                 latestTime = ord.time;
-                ord.items.forEach(item => {
-                    totalAmount += item.price;
-                    itemsHtml += `<div>${item.name} x${item.qty}</div>`;
-                });
+                if (ord.items) {
+                    ord.items.forEach(item => {
+                        const itemQty = item.qty || 1;
+                        totalAmount += item.price;
+
+                        if (!mergedItems[item.name]) {
+                            mergedItems[item.name] = { qty: 0, totalPrice: 0 };
+                        }
+                        mergedItems[item.name].qty += itemQty;
+                        mergedItems[item.name].totalPrice += item.price;
+                    });
+                }
+            });
+
+            let itemsHtml = '';
+            Object.keys(mergedItems).forEach(name => {
+                const item = mergedItems[name];
+                itemsHtml += `
+                    <div class="order-item-row">
+                        <span>• ${name} (x${item.qty})</span>
+                        <span style="color:#64748b; font-size:11px;">${item.totalPrice.toLocaleString()}원</span>
+                    </div>
+                `;
             });
 
             card.innerHTML = `
                 <div>
-                    <div class="table-header">
+                    <div class="card-header" style="display:flex; justify-content:space-between; font-weight:bold; font-size:15px; margin-bottom:8px;">
                         <span>${tableName}</span>
                         <span class="order-time">${latestTime}</span>
                     </div>
@@ -357,7 +396,6 @@
             }
         }
 
-        // 선택된 테이블 비우기 (결제 완료 시 매출 DB에 전송 후 삭제)
         async function clearSelectedTable() {
             if (!selectedTable) return;
             const orders = (window.currentOrders && window.currentOrders[selectedTable]) || [];
@@ -369,64 +407,84 @@
             if (!confirm(`${selectedTable}을(를) 결제 및 퇴장 처리하시겠습니까?`)) return;
 
             try {
-                for (const ord of orders) {
-                    // 매출 DB(sales)에 저장
-                    const salesData = { ...ord, payTime: Date.now() };
-                    delete salesData.id;
-                    await window.addDoc(window.collection(window.db, "sales"), salesData);
+                // 선택한 테이블의 모든 미결제 주문 건을 하나의 결제 내역(1건)으로 통합
+                const allItems = [];
+                let latestTimestamp = Date.now();
+                let tableTime = '';
 
-                    // 주문 목록(orders)에서 삭제
+                orders.forEach(ord => {
+                    latestTimestamp = ord.timestamp || Date.now();
+                    tableTime = ord.time || tableTime;
+                    if (ord.items) {
+                        ord.items.forEach(item => allItems.push(item));
+                    }
+                });
+
+                const consolidatedSales = {
+                    table: selectedTable,
+                    time: tableTime,
+                    items: allItems,
+                    payTime: Date.now(),
+                    timestamp: latestTimestamp
+                };
+
+                // DB 매출 테이블에 1건만 기록
+                await window.addDoc(window.collection(window.db, "sales"), consolidatedSales);
+
+                // 매장 내 주문 데이터 지우기
+                for (const ord of orders) {
                     await window.deleteDoc(window.doc(window.db, "orders", ord.id));
                 }
+
             } catch (e) {
-                alert("비우기 실패: " + e.message);
+                alert("결제 처리 실패: " + e.message);
             }
         }
 
-        /* --- 월간 매출표 기능 --- */
+        /* 1월 ~ 12월 연간 매출 집계 */
         function openSalesModal() {
-            const now = new Date();
-            const monthStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
-            document.getElementById('sales-title').innerText = `📊 ${monthStr} 매출 집계표`;
-
             const sales = window.salesHistory || [];
-            let grandTotal = 0;
-            let totalOrders = sales.length;
-            const menuStats = {};
+            const monthlyData = Array.from({ length: 12 }, () => ({ count: 0, amount: 0 }));
+            let grandTotalAmount = 0;
 
             sales.forEach(ord => {
+                let payDate = ord.payTime ? new Date(ord.payTime) : (ord.timestamp ? new Date(ord.timestamp) : new Date());
+                const monthIndex = payDate.getMonth();
+
+                let orderAmount = 0;
                 if (ord.items) {
                     ord.items.forEach(item => {
-                        grandTotal += item.price;
-                        if (!menuStats[item.name]) {
-                            menuStats[item.name] = { qty: 0, price: 0 };
-                        }
-                        menuStats[item.name].qty += item.qty;
-                        menuStats[item.name].price += item.price;
+                        orderAmount += item.price;
                     });
                 }
+
+                // 결제건(결제 1회)당 1건으로 계산
+                monthlyData[monthIndex].count += 1;
+                monthlyData[monthIndex].amount += orderAmount;
+                grandTotalAmount += orderAmount;
             });
 
-            document.getElementById('total-sales-amount').innerText = grandTotal.toLocaleString();
-            document.getElementById('total-order-count').innerText = totalOrders.toLocaleString();
+            document.getElementById('total-sales-amount').innerText = grandTotalAmount.toLocaleString();
+            document.getElementById('total-order-count').innerText = sales.length.toLocaleString();
 
             const tbody = document.getElementById('sales-table-body');
             tbody.innerHTML = '';
 
-            const keys = Object.keys(menuStats);
-            if (keys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3">매출 내역이 없습니다.</td></tr>';
-            } else {
-                keys.forEach(menuName => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${menuName}</td>
-                        <td>${menuStats[menuName].qty}개</td>
-                        <td>${menuStats[menuName].price.toLocaleString()}원</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
+            const currentMonthIndex = new Date().getMonth();
+
+            monthlyData.forEach((data, index) => {
+                const tr = document.createElement('tr');
+                if (index === currentMonthIndex) {
+                    tr.className = 'highlight';
+                }
+
+                tr.innerHTML = `
+                    <td>${index + 1}월 ${index === currentMonthIndex ? '(이번달)' : ''}</td>
+                    <td>${data.count.toLocaleString()}건</td>
+                    <td>${data.amount.toLocaleString()}원</td>
+                `;
+                tbody.appendChild(tr);
+            });
 
             document.getElementById('sales-modal').style.display = 'flex';
         }
@@ -435,7 +493,91 @@
             document.getElementById('sales-modal').style.display = 'none';
         }
 
-        /* --- 비밀번호 입력 매출표 초기화 기능 (비밀번호: 0146) --- */
+        /* 최근 1주일 결제 내역 */
+        function openWeeklyHistoryModal() {
+            const sales = window.salesHistory || [];
+            const now = Date.now();
+            const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
+            const weeklySales = sales.filter(ord => {
+                const t = ord.payTime || ord.timestamp || now;
+                return (now - t) <= oneWeekMs;
+            }).sort((a, b) => (b.payTime || b.timestamp || 0) - (a.payTime || a.timestamp || 0));
+
+            let weeklyTotalAmount = 0;
+            const container = document.getElementById('weekly-history-list');
+            container.innerHTML = '';
+
+            if (weeklySales.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:30px;">최근 1주일간 결제 내역이 없습니다.</div>';
+            } else {
+                weeklySales.forEach(ord => {
+                    const payDate = new Date(ord.payTime || ord.timestamp || Date.now());
+                    const dateStr = payDate.toLocaleString('ko-KR', {
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    let cardAmount = 0;
+                    let itemsHtml = '';
+
+                    if (ord.items) {
+                        const mergedOrderItems = {};
+
+                        ord.items.forEach(item => {
+                            const itemQty = item.qty || 1;
+                            cardAmount += item.price;
+                            
+                            if (!mergedOrderItems[item.name]) {
+                                mergedOrderItems[item.name] = { qty: 0, totalPrice: 0 };
+                            }
+                            mergedOrderItems[item.name].qty += itemQty;
+                            mergedOrderItems[item.name].totalPrice += item.price;
+                        });
+
+                        Object.keys(mergedOrderItems).forEach(name => {
+                            const item = mergedOrderItems[name];
+                            itemsHtml += `
+                                <div class="history-item-row">
+                                    <span>• ${name} (x${item.qty})</span>
+                                    <span>${item.totalPrice.toLocaleString()}원</span>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    weeklyTotalAmount += cardAmount;
+
+                    const card = document.createElement('div');
+                    card.className = 'history-card';
+                    card.innerHTML = `
+                        <div class="history-card-header">
+                            <span>${ord.table || '매장'}</span>
+                            <span style="font-size:12px; color:#64748b;">${dateStr}</span>
+                        </div>
+                        <div>${itemsHtml}</div>
+                        <div class="history-card-footer">
+                            <span>총 결제금액</span>
+                            <span>${cardAmount.toLocaleString()}원</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            document.getElementById('weekly-total-amount').innerText = weeklyTotalAmount.toLocaleString();
+            document.getElementById('weekly-total-count').innerText = weeklySales.length.toLocaleString();
+
+            document.getElementById('weekly-history-modal').style.display = 'flex';
+        }
+
+        function closeWeeklyHistoryModal() {
+            document.getElementById('weekly-history-modal').style.display = 'none';
+        }
+
         async function resetSalesData() {
             const pwd = prompt("매출표 초기화 비밀번호를 입력하세요:");
             if (pwd === null) return;
