@@ -1,1 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오셨드레요 메밀여행 - 2번 주방 POS</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+        body { background-color: #2c3e50; color: #333; padding: 15px; }
+        header { display: flex; flex-direction: column; gap: 12px; color: #fff; margin-bottom: 20px; }
+        h1 { font-size: 26px; font-weight: 800; text-align: center; }
+        
+        .top-btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .sound-btn { background: #e74c3c; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .sound-btn.active { background: #27ae60; }
+        .soldout-manage-btn { background: #f39c12; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .history-btn { background: #2980b9; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
 
+        .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+        .order-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 6px 12px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: space-between; min-height: 220px; }
+        .order-card.k2-card { border-top: 8px solid #2980b9; }
+        .order-card.new { animation: pulse 1.5s infinite; }
+        
+        .order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 12px; margin-bottom: 12px; }
+        .table-badge { background: #2980b9; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 20px; font-weight: 900; }
+        .kitchen-tag { font-size: 15px; font-weight: bold; padding: 5px 10px; border-radius: 6px; }
+        .tag-k2 { background: #ebf5fb; color: #2980b9; }
+
+        .item-list { margin-bottom: 15px; }
+        .item-row { display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 8px; padding: 6px 0; border-bottom: 1px dashed #e0e0e0; }
+        .item-name { font-weight: 800; }
+        .item-qty { color: #c0392b; font-size: 22px; font-weight: 900; }
+
+        .order-footer { border-top: 2px solid #eee; padding-top: 12px; }
+        .btn-status { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; color: #fff; }
+        .btn-accept { background: #e67e22; }
+        .btn-done { background: #27ae60; }
+
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: #fff; width: 100%; max-width: 600px; border-radius: 12px; padding: 20px; max-height: 85vh; overflow-y: auto; }
+        .modal-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .modal-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 18px; font-weight: bold; }
+        .modal-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .btn-in-stock { background: #27ae60; color: #fff; }
+        .btn-sold-out { background: #e74c3c; color: #fff; }
+
+        .summary-box { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .summary-title { font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+        .summary-item { font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; background: #fff; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee; }
+        .history-card { background: #f9f9f9; border-left: 5px solid #2980b9; padding: 10px 14px; margin-bottom: 10px; border-radius: 6px; }
+        .history-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAceyCFUzGg5fz5pPWt9H6RgE3wrQe0ob4",
+            authDomain: "memil-pos.firebaseapp.com",
+            projectId: "memil-pos",
+            storageBucket: "memil-pos.firebasestorage.app",
+            messagingSenderId: "935304612479",
+            appId: "1:935304612479:web:7da29c1b9d53bce4da8d4a",
+            measurementId: "G-HT56JW59BN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
+
+        let initialLoad = true;
+        let knownOrderIds = new Set();
+        window.allOrdersList = [];
+
+        const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
+        onSnapshot(q, (snapshot) => {
+            const container = document.getElementById('orders-container');
+            container.innerHTML = '';
+            let cardCount = 0;
+            window.allOrdersList = [];
+
+            snapshot.docs.forEach(docSnap => {
+                const order = docSnap.data();
+                const docId = docSnap.id;
+                window.allOrdersList.push({ id: docId, ...order });
+
+                let k2List = [];
+                if (order.items && order.items.length > 0) {
+                    order.items.forEach(item => {
+                        if (item.name.includes('사리추가') || item.name.includes('감자전') || item.name.includes('막국수') || item.name.includes('묵사발') || item.name.includes('옹심이')) {
+                            k2List.push(item);
+                        }
+                    });
+                }
+
+                if (k2List.length > 0 && order.k2Status !== '완료') {
+                    if (!initialLoad && !knownOrderIds.has(docId + '_k2')) {
+                        playVoiceAlert();
+                    }
+                    knownOrderIds.add(docId + '_k2');
+
+                    cardCount++;
+                    const isNew = order.k2Status === '신규주문';
+                    const card2 = document.createElement('div');
+                    card2.className = `order-card k2-card ${isNew ? 'new' : ''}`;
+
+                    let itemsHtml = '';
+                    k2List.forEach(item => {
+                        itemsHtml += `<div class="item-row"><span class="item-name">${item.name}</span> <span class="item-qty">${item.qty}개</span></div>`;
+                    });
+
+                    let btnHtml = isNew ?
+                        `<button class="btn-status btn-accept" onclick="updateStatus('${docId}', 'k2Status', '조리중')">📥 [주방2] 조리 시작</button>` :
+                        `<button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k2Status', '완료')">✅ [주방2] 조리 완료</button>`;
+
+                    card2.innerHTML = `
+                        <div>
+                            <div class="order-header">
+                                <div>
+                                    <span class="table-badge">${order.table}</span>
+                                    <span class="kitchen-tag tag-k2">🍜 2번 주방 (국수/식사류)</span>
+                                </div>
+                                <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
+                            </div>
+                            <div class="item-list">${itemsHtml}</div>
+                        </div>
+                        <div class="order-footer">${btnHtml}</div>
+                    `;
+                    container.appendChild(card2);
+                }
+            });
+
+            if (cardCount === 0) {
+                container.innerHTML = '<div style="color:#fff; text-align:center; grid-column: 1/-1; padding: 50px 0; font-size: 20px;">현재 대기 중인 2번 주방 주문이 없습니다.</div>';
+            }
+
+            initialLoad = false;
+        });
+
+        window.updateStatus = async function(docId, key, status) {
+            const docRef = doc(db, "orders", docId);
+            await updateDoc(docRef, { [key]: status });
+        };
+
+        window.currentSoldOuts = [];
+        onSnapshot(doc(db, "settings", "soldout"), (docSnap) => {
+            if (docSnap.exists()) {
+                window.currentSoldOuts = docSnap.data().items || [];
+            } else {
+                window.currentSoldOuts = [];
+            }
+            renderSoldOutModalList();
+        });
+
+        window.toggleSoldOut = async function(menuName) {
+            let list = [...window.currentSoldOuts];
+            if (list.includes(menuName)) {
+                list = list.filter(m => m !== menuName);
+            } else {
+                list.push(menuName);
+            }
+            await setDoc(doc(db, "settings", "soldout"), { items: list });
+        };
+    </script>
+</head>
+<body>
+    <header>
+        <h1>🍜 오셨드레요 메밀여행 - 2번 주방 POS</h1>
+        <div class="top-btn-group">
+            <button id="soundBtn" class="sound-btn" onclick="enableSound()">🔈 [필수] 소리 켜기</button>
+            <button class="soldout-manage-btn" onclick="openSoldOutModal()">🚫 메뉴 품절/재고 관리</button>
+            <button class="history-btn" onclick="openHistoryModal()">📜 2번주방 주문 기록</button>
+        </div>
+    </header>
+
+    <div class="orders-grid" id="orders-container"></div>
+
+    <div class="modal-overlay" id="soldout-modal">
+        <div class="modal-content">
+            <div class="modal-title">🚫 재료 소진 / 품절 설정</div>
+            <div id="soldout-item-list"></div>
+            <button class="btn-status" style="background:#555; margin-top:20px;" onclick="closeSoldOutModal()">닫기</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal-content">
+            <div class="modal-title">📜 2번 주방 누적 주문 기록</div>
+            <div class="summary-box">
+                <div class="summary-title">📊 2번 주방 메뉴별 누적 수량</div>
+                <div class="summary-grid" id="history-summary"></div>
+            </div>
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">📋 상세 주문 기록</div>
+            <div id="history-item-list"></div>
+            <button class="btn-status" style="background:#555; margin-top:20px;" onclick="closeHistoryModal()">닫기</button>
+        </div>
+    </div>
+
+    <script>
+        const allMenuList = ["메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전", "메밀물막국수", "메밀비빔막국수", "메밀들기름막국수", "메밀묵사발", "감자옹심이", "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"];
+
+        function openSoldOutModal() { renderSoldOutModalList(); document.getElementById('soldout-modal').style.display = 'flex'; }
+        function closeSoldOutModal() { document.getElementById('soldout-modal').style.display = 'none'; }
+        function renderSoldOutModalList() {
+            const listDiv = document.getElementById('soldout-item-list');
+            if (!listDiv) return;
+            listDiv.innerHTML = '';
+            const soldOuts = window.currentSoldOuts || [];
+            allMenuList.forEach(name => {
+                const isSoldOut = soldOuts.includes(name);
+                const row = document.createElement('div');
+                row.className = 'modal-item';
+                row.innerHTML = `<span>${name}</span><button class="modal-btn ${isSoldOut ? 'btn-sold-out' : 'btn-in-stock'}" onclick="window.toggleSoldOut('${name}')">${isSoldOut ? '🔴 품절 중' : '🟢 판매 중'}</button>`;
+                listDiv.appendChild(row);
+            });
+        }
+
+        function openHistoryModal() { renderHistoryModal(); document.getElementById('history-modal').style.display = 'flex'; }
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; }
+        function renderHistoryModal() {
+            const summaryDiv = document.getElementById('history-summary');
+            const listDiv = document.getElementById('history-item-list');
+            if (!summaryDiv || !listDiv) return;
+            summaryDiv.innerHTML = ''; listDiv.innerHTML = '';
+
+            const orders = window.allOrdersList || [];
+            const counts = {};
+
+            orders.forEach(order => {
+                if (order.items) {
+                    order.items.forEach(item => {
+                        if (item.name.includes('사리추가') || item.name.includes('감자전') || item.name.includes('막국수') || item.name.includes('묵사발') || item.name.includes('옹심이')) {
+                            counts[item.name] = (counts[item.name] || 0) + (parseInt(item.qty) || 1);
+                        }
+                    });
+                }
+            });
+
+            Object.keys(counts).forEach(menuName => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'summary-item';
+                itemEl.innerHTML = `<span>${menuName}</span> <span style="color:#2980b9; font-weight:bold;">${counts[menuName]}개</span>`;
+                summaryDiv.appendChild(itemEl);
+            });
+
+            [...orders].reverse().forEach(order => {
+                let k2Items = (order.items || []).filter(i => i.name.includes('사리추가') || i.name.includes('감자전') || i.name.includes('막국수') || i.name.includes('묵사발') || i.name.includes('옹심이'));
+                if (k2Items.length > 0) {
+                    const card = document.createElement('div');
+                    card.className = 'history-card';
+                    card.innerHTML = `<div class="history-header"><span>테이블: ${order.table}</span><span>${order.time}</span></div><div>${k2Items.map(i => `${i.name} (${i.qty}개)`).join(', ')}</div>`;
+                    listDiv.appendChild(card);
+                }
+            });
+        }
+
+        window.enableSound = function() { playVoiceAlert(); const btn = document.getElementById('soundBtn'); btn.className = 'sound-btn active'; btn.innerHTML = '🔊 알림음 설정완료'; };
+        function playDingDong(audioCtx) {
+            const now = audioCtx.currentTime;
+            const osc1 = audioCtx.createOscillator(); const gain1 = audioCtx.createGain();
+            osc1.type = 'sine'; osc1.frequency.setValueAtTime(783.99, now);
+            gain1.gain.setValueAtTime(0.5, now); gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc1.connect(gain1); gain1.connect(audioCtx.destination); osc1.start(now); osc1.stop(now + 0.5);
+        }
+        function playVoiceAlert() {
+            try { const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); playDingDong(audioCtx); } catch (e) {}
+            if ('speechSynthesis' in window) {
+                setTimeout(() => { window.speechSynthesis.cancel(); const msg = new SpeechSynthesisUtterance("2번 주방 주문이 들어왔습니다!"); msg.lang = 'ko-KR'; window.speechSynthesis.speak(msg); }, 800);
+            }
+        }
+    </script>
+</body>
+</html>
