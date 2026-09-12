@@ -239,7 +239,15 @@
     </div>
 
     <script>
-        const allMenuList = ["메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전", "메밀물막국수", "메밀비빔막국수", "메밀들기름막국수", "메밀묵사발", "감자옹심이", "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"];
+        // 곱빼기 항목들을 품절 관리 목록에 추가
+        const allMenuList = [
+            "메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전", 
+            "메밀물막국수", "메밀물막국수(곱빼기)", 
+            "메밀비빔막국수", "메밀비빔막국수(곱빼기)", 
+            "메밀들기름막국수", "메밀들기름막국수(곱빼기)", 
+            "메밀묵사발", "메밀묵사발(곱빼기)", 
+            "감자옹심이", "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"
+        ];
 
         function openSoldOutModal() { renderSoldOutModalList(); document.getElementById('soldout-modal').style.display = 'flex'; }
         function closeSoldOutModal() { document.getElementById('soldout-modal').style.display = 'none'; }

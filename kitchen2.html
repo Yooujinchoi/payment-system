@@ -19,12 +19,14 @@
         .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
         .order-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 6px 12px rgba(0,0,0,0.2); display: flex; flex-direction: column; justify-content: space-between; min-height: 220px; }
         .order-card.k2-card { border-top: 8px solid #2980b9; }
+        .order-card.call-card { border-top: 8px solid #e74c3c; background-color: #fff5f5; }
         .order-card.new { animation: pulse 1.5s infinite; }
         
         .order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 12px; margin-bottom: 12px; }
         .table-badge { background: #2980b9; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 20px; font-weight: 900; }
         .kitchen-tag { font-size: 15px; font-weight: bold; padding: 5px 10px; border-radius: 6px; }
         .tag-k2 { background: #ebf5fb; color: #2980b9; }
+        .tag-call { background: #fadbd8; color: #78281f; }
 
         .item-list { margin-bottom: 15px; }
         .item-row { display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 8px; padding: 6px 0; border-bottom: 1px dashed #e0e0e0; }
@@ -33,7 +35,7 @@
 
         .order-footer { border-top: 2px solid #eee; padding-top: 12px; }
         .btn-status { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; color: #fff; }
-        .btn-accept { background: #e67e22; }
+        .btn-accept { background: #3498db; }
         .btn-done { background: #27ae60; }
 
         .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; padding: 20px; }
@@ -95,21 +97,51 @@
                 const docId = docSnap.id;
                 window.allOrdersList.push({ id: docId, ...order });
 
+                const isCall = order.items && order.items.some(i => i.name.includes("직원 호출"));
+
                 let k2List = [];
-                if (order.items && order.items.length > 0) {
+                if (!isCall && order.items && order.items.length > 0) {
                     order.items.forEach(item => {
+                        // 2번 주방 메뉴 조건 (감자전, 막국수, 묵사발, 옹심이, 사리추가)
                         if (item.name.includes('사리추가') || item.name.includes('감자전') || item.name.includes('막국수') || item.name.includes('묵사발') || item.name.includes('옹심이')) {
                             k2List.push(item);
                         }
                     });
                 }
 
-                if (k2List.length > 0 && order.k2Status !== '완료') {
+                if ((isCall || k2List.length > 0) && order.k2Status !== '완료') {
                     if (!initialLoad && !knownOrderIds.has(docId + '_k2')) {
                         playVoiceAlert();
                     }
                     knownOrderIds.add(docId + '_k2');
+                }
 
+                if (isCall && order.k2Status !== '완료') {
+                    cardCount++;
+                    const isNew = order.k2Status === '신규주문';
+                    const cardCall = document.createElement('div');
+                    cardCall.className = `order-card call-card ${isNew ? 'new' : ''}`;
+                    cardCall.innerHTML = `
+                        <div>
+                            <div class="order-header">
+                                <div>
+                                    <span class="table-badge">${order.table}</span>
+                                    <span class="kitchen-tag tag-call">🔔 직원 호출</span>
+                                </div>
+                                <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
+                            </div>
+                            <div class="item-list">
+                                <div class="item-row" style="color: #c0392b; font-weight: bold; font-size: 22px;">
+                                    <span>🔔 직원 호출</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="order-footer">
+                            <button class="btn-status btn-done" onclick="updateStatus('${docId}', 'k2Status', '완료')">✅ 응대 완료</button>
+                        </div>
+                    `;
+                    container.appendChild(cardCall);
+                } else if (k2List.length > 0 && order.k2Status !== '완료') {
                     cardCount++;
                     const isNew = order.k2Status === '신규주문';
                     const card2 = document.createElement('div');
@@ -129,7 +161,7 @@
                             <div class="order-header">
                                 <div>
                                     <span class="table-badge">${order.table}</span>
-                                    <span class="kitchen-tag tag-k2">🍜 2번 주방 (국수/식사류)</span>
+                                    <span class="kitchen-tag tag-k2">🍜 2번 주방 (국수/감자전/옹심이)</span>
                                 </div>
                                 <span style="font-size: 15px; color: #666; font-weight:bold;">${order.time}</span>
                             </div>
@@ -153,6 +185,7 @@
             await updateDoc(docRef, { [key]: status });
         };
 
+        // --- 품절 관리 Firestore 실시간 동기화 ---
         window.currentSoldOuts = [];
         onSnapshot(doc(db, "settings", "soldout"), (docSnap) => {
             if (docSnap.exists()) {
@@ -186,6 +219,7 @@
 
     <div class="orders-grid" id="orders-container"></div>
 
+    <!-- 품절/재고 관리 모달 -->
     <div class="modal-overlay" id="soldout-modal">
         <div class="modal-content">
             <div class="modal-title">🚫 재료 소진 / 품절 설정</div>
@@ -194,6 +228,7 @@
         </div>
     </div>
 
+    <!-- 2번 주방 누적 주문 기록 모달 -->
     <div class="modal-overlay" id="history-modal">
         <div class="modal-content">
             <div class="modal-title">📜 2번 주방 누적 주문 기록</div>
@@ -208,7 +243,14 @@
     </div>
 
     <script>
-        const allMenuList = ["메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전", "메밀물막국수", "메밀비빔막국수", "메밀들기름막국수", "메밀묵사발", "감자옹심이", "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"];
+        const allMenuList = [
+            "메밀전모듬", "메밀전", "메밀전병", "수수부꾸미(수수전병)", "감자전", 
+            "메밀물막국수", "메밀물막국수(곱빼기)", 
+            "메밀비빔막국수", "메밀비빔막국수(곱빼기)", 
+            "메밀들기름막국수", "메밀들기름막국수(곱빼기)", 
+            "메밀묵사발", "메밀묵사발(곱빼기)", 
+            "감자옹심이", "소주 / 맥주", "봉평메밀막걸리", "음료수", "사리추가"
+        ];
 
         function openSoldOutModal() { renderSoldOutModalList(); document.getElementById('soldout-modal').style.display = 'flex'; }
         function closeSoldOutModal() { document.getElementById('soldout-modal').style.display = 'none'; }
@@ -240,6 +282,7 @@
             orders.forEach(order => {
                 if (order.items) {
                     order.items.forEach(item => {
+                        // 2번 주방 용 메뉴 누적 카운트 필터
                         if (item.name.includes('사리추가') || item.name.includes('감자전') || item.name.includes('막국수') || item.name.includes('묵사발') || item.name.includes('옹심이')) {
                             counts[item.name] = (counts[item.name] || 0) + (parseInt(item.qty) || 1);
                         }
